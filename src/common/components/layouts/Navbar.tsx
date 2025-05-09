@@ -1,8 +1,17 @@
 
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { Menu, Sun, Moon, Laptop, ChevronDown } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { Menu, Sun, Moon, Laptop, ChevronDown, LogIn, UserCircle } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
+import { useAuth } from "@/contexts/AuthContext";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -10,8 +19,11 @@ interface NavbarProps {
 
 export default function Navbar({ onToggleSidebar }: NavbarProps) {
   const { theme, setTheme } = useTheme();
+  const { user, profile, signOut, isAdmin } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
+  const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -25,6 +37,21 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
+  
+  const getInitials = () => {
+    if (profile?.full_name) {
+      return profile.full_name.split(' ')
+        .map(name => name[0])
+        .join('')
+        .toUpperCase();
+    }
+    return user?.email?.charAt(0).toUpperCase() || 'U';
+  };
 
   return (
     <header
@@ -57,6 +84,9 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
           </Link>
           <Link to="/templates" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
             Templates
+          </Link>
+          <Link to="/about" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
+            About
           </Link>
         </div>
 
@@ -108,6 +138,43 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
               </div>
             )}
           </div>
+
+          {user ? (
+            <DropdownMenu open={isUserDropdownOpen} onOpenChange={setIsUserDropdownOpen}>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="relative h-8 rounded-full flex items-center space-x-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={profile?.avatar_url || ''} />
+                    <AvatarFallback>{getInitials()}</AvatarFallback>
+                  </Avatar>
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard">Dashboard</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard/profile">Profile</Link>
+                </DropdownMenuItem>
+                {isAdmin && (
+                  <DropdownMenuItem asChild>
+                    <Link to="/dashboard/admin/blog-posts">Admin</Link>
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem onClick={handleSignOut}>
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Button variant="default" size="sm" asChild>
+              <Link to="/login">
+                <LogIn className="mr-2 h-4 w-4" />
+                Login
+              </Link>
+            </Button>
+          )}
         </div>
       </nav>
     </header>
