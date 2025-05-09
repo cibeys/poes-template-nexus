@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Sun, Moon, Laptop, ChevronDown, LogIn, UserCircle } from "lucide-react";
+import { Menu, Sun, Moon, Laptop, ChevronDown, LogIn, UserCircle, Download, MessageSquare } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -85,6 +85,14 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
           <Link to="/templates" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
             Templates
           </Link>
+          <Link to="/video-downloader" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
+            <Download className="inline-block mr-1 h-4 w-4" />
+            Downloader
+          </Link>
+          <Link to="/ai-chat" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
+            <MessageSquare className="inline-block mr-1 h-4 w-4" />
+            AI Chat
+          </Link>
           <Link to="/about" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
             About
           </Link>
@@ -156,6 +164,12 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/dashboard/profile">Profile</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/video-downloader">Video Downloader</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/ai-chat">AI Chat</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>

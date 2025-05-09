@@ -17,6 +17,8 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import { AuthProvider } from "./contexts/AuthContext";
+import VideoDownloader from "./pages/VideoDownloader";
+import AIChat from "./pages/AIChat";
 
 // Create the query client inside the component function
 const App = () => {
@@ -41,6 +43,8 @@ const App = () => {
                 <Route path="/dashboard/*" element={<Dashboard />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/register" element={<Register />} />
+                <Route path="/video-downloader" element={<VideoDownloader />} />
+                <Route path="/ai-chat" element={<AIChat />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

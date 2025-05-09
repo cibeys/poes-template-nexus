@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart } from "lucide-react";
+import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare } from "lucide-react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -135,6 +135,20 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               isActive={isActive("/templates/featured")}
             />
           </Dropdown>
+
+          <NavItem
+            icon={<Download size={18} />}
+            title="Video Downloader"
+            href="/video-downloader"
+            isActive={isActive("/video-downloader")}
+          />
+
+          <NavItem
+            icon={<MessageSquare size={18} />}
+            title="AI Chat"
+            href="/ai-chat"
+            isActive={isActive("/ai-chat")}
+          />
 
           <NavItem
             icon={<User size={18} />}

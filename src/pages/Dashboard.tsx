@@ -10,6 +10,8 @@ import AdminTemplates from "@/modules/dashboard/components/AdminTemplates";
 import AdminUsers from "@/modules/dashboard/components/AdminUsers";
 import AdminCategories from "@/modules/dashboard/components/AdminCategories";
 import UserPosts from "@/modules/dashboard/components/UserPosts";
+import VideoDownloader from "./VideoDownloader";
+import AIChat from "./AIChat";
 
 export default function Dashboard() {
   const { user, loading, isAdmin } = useAuth();
@@ -23,7 +25,11 @@ export default function Dashboard() {
   }, [user, loading, navigate]);
 
   if (loading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -36,6 +42,8 @@ export default function Dashboard() {
         <Route path="/" element={<DashboardOverview />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/posts" element={<UserPosts />} />
+        <Route path="/video-downloader" element={<VideoDownloader />} />
+        <Route path="/ai-chat" element={<AIChat />} />
         
         {/* Admin only routes */}
         {isAdmin ? (
