@@ -1,0 +1,149 @@
+
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart } from "lucide-react";
+
+interface SidebarProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+interface NavItemProps {
+  icon: React.ReactNode;
+  title: string;
+  href: string;
+  isActive: boolean;
+}
+
+interface DropdownProps {
+  icon: React.ReactNode;
+  title: string;
+  children: React.ReactNode;
+  defaultOpen?: boolean;
+}
+
+function NavItem({ icon, title, href, isActive }: NavItemProps) {
+  return (
+    <Link
+      to={href}
+      className={`flex items-center space-x-3 px-3 py-2 rounded-md transition-colors ${
+        isActive
+          ? "bg-primary/10 text-primary dark:bg-primary/20"
+          : "hover:bg-gray-100 dark:hover:bg-gray-800"
+      }`}
+    >
+      <div>{icon}</div>
+      <span>{title}</span>
+    </Link>
+  );
+}
+
+function Dropdown({ icon, title, children, defaultOpen = false }: DropdownProps) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="space-y-1">
+      <button
+        className="w-full flex items-center justify-between px-3 py-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center space-x-3">
+          <div>{icon}</div>
+          <span>{title}</span>
+        </div>
+        {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+      </button>
+      {isOpen && <div className="pl-10 pr-2 space-y-1">{children}</div>}
+    </div>
+  );
+}
+
+export default function Sidebar({ isOpen, onClose }: SidebarProps) {
+  const location = useLocation();
+  const isActive = (path: string) => location.pathname === path;
+
+  return (
+    <>
+      {/* Overlay for mobile */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={onClose}
+        ></div>
+      )}
+
+      {/* Sidebar */}
+      <aside
+        className={`fixed top-0 left-0 z-50 h-full w-64 bg-white dark:bg-gray-900 shadow-lg transform transition-transform duration-300 lg:static lg:transform-none lg:transition-none lg:z-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
+      >
+        <div className="flex items-center justify-between p-4 border-b dark:border-gray-800">
+          <Link to="/" className="font-bold text-xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+            POES
+          </Link>
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <nav className="p-4 space-y-2">
+          <NavItem
+            icon={<Home size={18} />}
+            title="Home"
+            href="/"
+            isActive={isActive("/")}
+          />
+          
+          <Dropdown
+            icon={<FileText size={18} />}
+            title="Blog"
+            defaultOpen={location.pathname.startsWith("/blog")}
+          >
+            <NavItem
+              icon={<FileText size={16} />}
+              title="All Posts"
+              href="/blog"
+              isActive={isActive("/blog")}
+            />
+            <NavItem
+              icon={<Heart size={16} />}
+              title="Popular Posts"
+              href="/blog/popular"
+              isActive={isActive("/blog/popular")}
+            />
+          </Dropdown>
+
+          <Dropdown
+            icon={<Layout size={18} />}
+            title="Templates"
+            defaultOpen={location.pathname.startsWith("/templates")}
+          >
+            <NavItem
+              icon={<Layout size={16} />}
+              title="All Templates"
+              href="/templates"
+              isActive={isActive("/templates")}
+            />
+            <NavItem
+              icon={<Heart size={16} />}
+              title="Featured"
+              href="/templates/featured"
+              isActive={isActive("/templates/featured")}
+            />
+          </Dropdown>
+
+          <NavItem
+            icon={<User size={18} />}
+            title="About"
+            href="/about"
+            isActive={isActive("/about")}
+          />
+        </nav>
+      </aside>
+    </>
+  );
+}
