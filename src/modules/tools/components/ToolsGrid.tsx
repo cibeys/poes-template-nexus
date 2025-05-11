@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Calculator, Thermometer, MapPin, Clock, Gamepad2, CloudRain, FileText, KeySquare, Zap, Box } from 'lucide-react';
+import { Calculator, Thermometer, MapPin, Clock, Gamepad2, CloudRain, FileText, KeySquare, Zap, Box, Type } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
@@ -36,6 +36,13 @@ const tools = [
     path: '/tools/typing-speed'
   },
   {
+    id: 'text-cleaner',
+    title: 'Text Cleaner',
+    description: 'Clean and transform text with various operations',
+    icon: <Type className="h-10 w-10 text-primary" />,
+    path: '/tools/text-cleaner'
+  },
+  {
     id: 'slot-game',
     title: 'Mini Slot Game',
     description: 'Play a fun slot machine game with beautiful animations',
@@ -55,13 +62,6 @@ const tools = [
     description: 'Convert between different units of measurement',
     icon: <Thermometer className="h-10 w-10 text-primary" />,
     path: '/tools/converter'
-  },
-  {
-    id: 'text-tools',
-    title: 'Text Tools',
-    description: 'A collection of text manipulation and formatting tools',
-    icon: <FileText className="h-10 w-10 text-primary" />,
-    path: '/tools/text-tools'
   },
   {
     id: 'qr-generator',

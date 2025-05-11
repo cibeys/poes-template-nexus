@@ -4,6 +4,7 @@ import { useParams, Navigate } from 'react-router-dom';
 import MainLayout from "@/common/components/layouts/MainLayout";
 import Calculator from '@/modules/tools/components/Calculator';
 import TypingSpeedTest from '@/modules/tools/components/TypingSpeedTest';
+import TextCleaner from '@/modules/tools/components/TextCleaner';
 
 export default function ToolsDetail() {
   const { toolId } = useParams<{ toolId: string }>();
@@ -14,6 +15,8 @@ export default function ToolsDetail() {
         return <Calculator />;
       case 'typing-speed':
         return <TypingSpeedTest />;
+      case 'text-cleaner':
+        return <TextCleaner />;
       default:
         return <Navigate to="/tools" replace />;
     }
