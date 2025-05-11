@@ -15,6 +15,8 @@
     --popover-foreground: 222.2 84% 4.9%;
 
     --primary: 222 50% 50%;
+    --primary-color: #3B82F6;
+    --surface-color: #f8fafc;
     --primary-foreground: 210 40% 98%;
 
     --secondary: 210 40% 96.1%;
@@ -93,6 +95,35 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  /* Apply theme presets */
+  .preset-aura {
+    --primary: 217 91% 60%;
+    --accent: 243 75% 59%;
+    background-image: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  }
+
+  .preset-lara {
+    --primary: 222.2 47.4% 11.2%;
+    --accent: 210 40% 96.1%;
+    background-color: var(--surface-color);
+  }
+
+  .preset-nora {
+    --primary: 263 70% 50%;
+    --accent: 329 86% 70%;
+    background-image: linear-gradient(to right, #434343 0%, black 100%);
+    color: white;
+  }
+
+  /* Menu type styles */
+  .menu-slim .sidebar {
+    width: 5rem;
+  }
+
+  .menu-slim-plus .sidebar {
+    width: 3.5rem;
   }
 }
 

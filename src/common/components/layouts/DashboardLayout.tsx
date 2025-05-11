@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Users, FileText, Layout, User, 
-  LogOut, Menu, X, ChevronDown, Tag
+  LogOut, Menu, X, ChevronDown, Tag, Settings
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -16,16 +16,19 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ThemeCustomizerProvider, useThemeCustomizer } from "@/contexts/ThemeContext";
+import ThemeCustomizer from "@/modules/dashboard/components/ThemeCustomizer";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
 }
 
-export default function DashboardLayout({ children }: DashboardLayoutProps) {
+const DashboardLayoutContent = ({ children }: DashboardLayoutProps) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const { user, profile, signOut, isAdmin } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { toggleCustomizer } = useThemeCustomizer();
   
   const handleSignOut = async () => {
     const success = await signOut();
@@ -205,6 +208,15 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           </Button>
           
           <div className="flex items-center space-x-4">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={toggleCustomizer}
+              title="Customize Theme"
+            >
+              <Settings size={18} />
+            </Button>
+
             <Link to="/" className="text-sm hover:underline hidden md:inline-block">
               View Site
             </Link>
@@ -237,6 +249,17 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
           {children}
         </main>
       </div>
+      
+      {/* Theme Customizer */}
+      <ThemeCustomizer />
     </div>
+  );
+};
+
+export default function DashboardLayout({ children }: DashboardLayoutProps) {
+  return (
+    <ThemeCustomizerProvider>
+      <DashboardLayoutContent>{children}</DashboardLayoutContent>
+    </ThemeCustomizerProvider>
   );
 }

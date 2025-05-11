@@ -62,7 +62,10 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
-				}
+				},
+				// Custom theme colors
+				'primary-custom': 'var(--primary-color)',
+				'surface-custom': 'var(--surface-color)',
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
