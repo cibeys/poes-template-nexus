@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { 
   Card, 
@@ -10,7 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Download, Check, AlertCircle, Youtube, Instagram, Facebook, TikTok, Search } from "lucide-react";
+import { Download, Check, AlertCircle, Youtube, Instagram, Facebook, Music2, Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import MainLayout from "@/common/components/layouts/MainLayout";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -70,7 +69,7 @@ export default function VideoDownloader() {
     },
     tiktok: {
       name: "TikTok",
-      icon: <TikTok className="h-5 w-5 text-black dark:text-white" />,
+      icon: <Music2 className="h-5 w-5 text-black dark:text-white" />,
       placeholder: "https://www.tiktok.com/@user/video/...",
       color: "bg-gray-50 dark:bg-gray-800",
       textColor: "text-black dark:text-white",
@@ -167,7 +166,7 @@ export default function VideoDownloader() {
                     <span className="hidden sm:inline">Facebook</span>
                   </TabsTrigger>
                   <TabsTrigger value="tiktok" className="flex items-center justify-center">
-                    <TikTok className="h-4 w-4 mr-2" />
+                    <Music2 className="h-4 w-4 mr-2" />
                     <span className="hidden sm:inline">TikTok</span>
                   </TabsTrigger>
                 </TabsList>

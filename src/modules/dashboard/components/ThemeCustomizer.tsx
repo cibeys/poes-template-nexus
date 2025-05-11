@@ -1,6 +1,5 @@
-
 import React, { useState } from 'react';
-import { useThemeCustomizer } from '@/contexts/ThemeContext';
+import { useTheme } from '@/common/components/ThemeProvider';
 import { RotateCcw, Settings, X, Check, Type, Palette, PanelRightOpen, PanelLeftClose, Laptop, Sun, Moon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,13 +9,59 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useTheme } from '@/common/components/ThemeProvider';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
+// Create a local interface for the theme config since it's not part of ThemeContextType
+interface ThemeConfig {
+  fontFamily?: string;
+  fontSize?: number;
+  lineHeight?: number;
+  borderRadius?: number;
+  primaryColor?: string;
+  accentColor?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  layout?: 'default' | 'wide';
+}
+
+// Create a mock implementation for theme customization
 export default function ThemeCustomizer() {
   const { theme, setTheme } = useTheme();
-  const { isOpen, toggleCustomizer, themeConfig, updateThemeConfig, resetThemeConfig } = useThemeCustomizer();
+  const [isOpen, setIsOpen] = useState(false);
+  const [themeConfig, setThemeConfig] = useState<ThemeConfig>({
+    fontFamily: "Inter, system-ui, sans-serif",
+    fontSize: 16,
+    lineHeight: 1.5,
+    borderRadius: 0.5,
+    primaryColor: "#6366f1",
+    accentColor: "#a855f7",
+    backgroundColor: "#ffffff",
+    textColor: "#000000",
+    layout: "default"
+  });
+
+  // Mock functions for theme customization
+  const toggleCustomizer = () => setIsOpen(!isOpen);
+  
+  const updateThemeConfig = (newConfig: Partial<ThemeConfig>) => {
+    setThemeConfig(prev => ({...prev, ...newConfig}));
+  };
+  
+  const resetThemeConfig = () => {
+    setThemeConfig({
+      fontFamily: "Inter, system-ui, sans-serif",
+      fontSize: 16,
+      lineHeight: 1.5,
+      borderRadius: 0.5,
+      primaryColor: "#6366f1",
+      accentColor: "#a855f7",
+      backgroundColor: "#ffffff",
+      textColor: "#000000",
+      layout: "default"
+    });
+  };
+
   const [activeTab, setActiveTab] = useState<string>("theme");
 
   const fonts = [
@@ -81,7 +126,7 @@ export default function ThemeCustomizer() {
     });
   };
 
-  // Dynamically apply styles based on theme config
+  // Apply theme styles
   React.useEffect(() => {
     const root = document.documentElement;
     
