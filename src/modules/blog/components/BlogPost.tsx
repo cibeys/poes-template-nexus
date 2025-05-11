@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Calendar, Eye, Clock, User, Share2, Facebook, Twitter, Linkedin, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Calendar, Eye, Clock, User, Share2, Facebook, Twitter, Linkedin, Copy, Check, Bookmark, BookmarkCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import CodeBlock from './CodeBlock';
 import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 // Define blog post interface
 interface BlogPost {
@@ -208,6 +209,8 @@ export default function BlogPost() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [bookmarked, setBookmarked] = useState(false);
+  const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -239,6 +242,9 @@ export default function BlogPost() {
             .from('blog_posts')
             .update({ view_count: (data.view_count || 0) + 1 })
             .eq('id', data.id);
+            
+          // Fetch related posts based on categories
+          fetchRelatedPosts(data);
           return;
         }
       } catch (dbError) {
@@ -248,11 +254,70 @@ export default function BlogPost() {
       
       // Use mock data if no database or for development
       setPost(mockBlogPost);
+      // Mock related posts
+      setRelatedPosts([
+        {
+          id: '2',
+          title: 'Advanced React Patterns for Beginners',
+          excerpt: 'Learn advanced React patterns that every beginner should know about',
+          featured_image: 'https://images.unsplash.com/photo-1558669038-1b1bc1dc76d2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          author_id: '2',
+          publish_date: '2023-04-15',
+          slug: 'advanced-react-patterns',
+          view_count: 850,
+          content: '',
+          created_at: '2023-04-10',
+          author: {
+            full_name: 'John Doe',
+            username: 'johndoe',
+            avatar_url: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80'
+          },
+        },
+        {
+          id: '3',
+          title: 'CSS Tips and Tricks for Modern Websites',
+          excerpt: 'Modern CSS techniques to make your websites look stunning',
+          featured_image: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
+          author_id: '3',
+          publish_date: '2023-05-20',
+          slug: 'css-tips-tricks',
+          view_count: 1120,
+          content: '',
+          created_at: '2023-05-15',
+          author: {
+            full_name: 'Alice Johnson',
+            username: 'alicej',
+            avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=761&q=80'
+          },
+        }
+      ]);
     } catch (err) {
       console.error("Error fetching blog post:", err);
       setError("Failed to load blog post");
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchRelatedPosts = async (currentPost: BlogPost) => {
+    // Real implementation would fetch based on categories or tags
+    try {
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          author:profiles(full_name, username, avatar_url)
+        `)
+        .neq('id', currentPost.id)
+        .limit(3);
+        
+      if (error) throw error;
+      
+      if (data && data.length > 0) {
+        setRelatedPosts(data);
+      }
+    } catch (err) {
+      console.error("Error fetching related posts:", err);
     }
   };
 
@@ -266,6 +331,16 @@ export default function BlogPost() {
       description: "The post link has been copied to your clipboard",
     });
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const toggleBookmark = () => {
+    setBookmarked(!bookmarked);
+    toast({
+      title: bookmarked ? "Removed from bookmarks" : "Added to bookmarks",
+      description: bookmarked 
+        ? "This post has been removed from your bookmarks" 
+        : "This post has been added to your bookmarks",
+    });
   };
   
   // Render loading state
@@ -356,7 +431,7 @@ export default function BlogPost() {
     <div className="bg-gray-50 dark:bg-gray-900/50 min-h-screen pb-16">
       {/* Hero section with featured image */}
       <div className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden">
-        <div className="absolute inset-0 bg-black/60 z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/40 z-10" />
         <img 
           src={post.featured_image} 
           alt={post.title} 
@@ -365,7 +440,7 @@ export default function BlogPost() {
         <div className="absolute inset-0 flex items-center justify-center z-20">
           <div className="container px-4 text-center">
             <motion.h1 
-              className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4"
+              className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
@@ -423,6 +498,17 @@ export default function BlogPost() {
                 <Clock className="h-4 w-4 mr-1" />
                 {calculateReadingTime(post.content)} min read
               </div>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                className="p-0 h-auto hover:bg-transparent hover:text-primary"
+                onClick={toggleBookmark}
+              >
+                {bookmarked ? 
+                  <BookmarkCheck className="h-4 w-4 text-primary" /> : 
+                  <Bookmark className="h-4 w-4" />
+                }
+              </Button>
             </div>
           </div>
           
@@ -439,19 +525,19 @@ export default function BlogPost() {
           <div className="pt-4">
             <h4 className="text-lg font-semibold mb-4">Share this post</h4>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank')}>
+              <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank')}>
                 <Facebook className="h-4 w-4 mr-2" />
                 Facebook
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`, '_blank')}>
+              <Button variant="outline" size="sm" className="hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 dark:hover:text-sky-400" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`, '_blank')}>
                 <Twitter className="h-4 w-4 mr-2" />
                 Twitter
               </Button>
-              <Button variant="outline" size="sm" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank')}>
+              <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 dark:hover:text-blue-400" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank')}>
                 <Linkedin className="h-4 w-4 mr-2" />
                 LinkedIn
               </Button>
-              <Button variant="outline" size="sm" onClick={copyLink}>
+              <Button variant="outline" size="sm" className="hover:bg-gray-100 dark:hover:bg-gray-700" onClick={copyLink}>
                 {copied ? (
                   <><Check className="h-4 w-4 mr-2" /> Copied</>
                 ) : (
@@ -461,6 +547,53 @@ export default function BlogPost() {
             </div>
           </div>
         </div>
+        
+        {/* Related Posts Section */}
+        {relatedPosts.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-2xl font-bold mb-6">Related Posts</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {relatedPosts.map((relatedPost) => (
+                <motion.div
+                  key={relatedPost.id}
+                  className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  whileHover={{ y: -5 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="h-48 overflow-hidden">
+                    <img
+                      src={relatedPost.featured_image}
+                      alt={relatedPost.title}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-lg mb-2 line-clamp-2">{relatedPost.title}</h3>
+                    <p className="text-gray-600 dark:text-gray-300 text-sm line-clamp-2 mb-3">
+                      {relatedPost.excerpt}
+                    </p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center">
+                        <Avatar className="h-6 w-6 mr-2">
+                          <AvatarImage src={relatedPost.author?.avatar_url} />
+                          <AvatarFallback>{relatedPost.author?.full_name?.charAt(0) || 'U'}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-xs">{relatedPost.author?.full_name}</span>
+                      </div>
+                      <Button 
+                        variant="link" 
+                        className="p-0 h-auto text-primary"
+                        onClick={() => navigate(`/blog/${relatedPost.slug}`)}
+                      >
+                        Read more
+                      </Button>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        )}
         
         <div className="mt-8 text-center">
           <Button variant="outline" onClick={() => navigate('/blog')}>
