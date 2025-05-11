@@ -1,7 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Sun, Moon, Laptop, ChevronDown, LogIn, UserCircle, Download, MessageSquare } from "lucide-react";
+import { Menu, Sun, Moon, Laptop, ChevronDown, LogIn, UserCircle, Download, MessageSquare, Wrench } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { motion } from "framer-motion";
 
 interface NavbarProps {
   onToggleSidebar: () => void;
@@ -53,8 +54,38 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
     return user?.email?.charAt(0).toUpperCase() || 'U';
   };
 
+  const navItems = [
+    { title: 'Home', path: '/' },
+    { title: 'Blog', path: '/blog' },
+    { title: 'Templates', path: '/templates' },
+    { 
+      title: 'Tools', 
+      path: '/tools',
+      icon: <Wrench className="inline-block mr-1 h-4 w-4" />
+    },
+    { 
+      title: 'Downloader', 
+      path: '/video-downloader',
+      icon: <Download className="inline-block mr-1 h-4 w-4" /> 
+    },
+    { 
+      title: 'AI Chat', 
+      path: '/ai-chat',
+      icon: <MessageSquare className="inline-block mr-1 h-4 w-4" /> 
+    },
+    { title: 'About', path: '/about' }
+  ];
+
+  const fadeInVariants = {
+    hidden: { opacity: 0, y: -10 },
+    visible: { opacity: 1, y: 0 }
+  };
+
   return (
-    <header
+    <motion.header
+      initial="hidden"
+      animate="visible"
+      variants={fadeInVariants}
       className={`sticky top-0 z-50 w-full transition-all duration-300 ${
         isScrolled
           ? "bg-white/80 dark:bg-gray-900/80 backdrop-blur-lg shadow-md"
@@ -63,39 +94,43 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
     >
       <nav className="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center">
-          <button 
+          <motion.button 
+            whileTap={{ scale: 0.9 }}
             onClick={onToggleSidebar}
             className="lg:hidden mr-4 p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
             aria-label="Toggle sidebar"
           >
             <Menu size={20} />
-          </button>
+          </motion.button>
           <Link to="/" className="flex items-center space-x-2">
-            <span className="font-bold text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">POES</span>
+            <motion.span 
+              className="font-bold text-2xl bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent"
+              initial={{ scale: 0.9 }}
+              animate={{ scale: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              TANOELUIS
+            </motion.span>
           </Link>
         </div>
 
         <div className="hidden md:flex items-center space-x-6">
-          <Link to="/" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
-            Home
-          </Link>
-          <Link to="/blog" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
-            Blog
-          </Link>
-          <Link to="/templates" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
-            Templates
-          </Link>
-          <Link to="/video-downloader" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
-            <Download className="inline-block mr-1 h-4 w-4" />
-            Downloader
-          </Link>
-          <Link to="/ai-chat" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
-            <MessageSquare className="inline-block mr-1 h-4 w-4" />
-            AI Chat
-          </Link>
-          <Link to="/about" className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors">
-            About
-          </Link>
+          {navItems.map((item, index) => (
+            <motion.div
+              key={item.path}
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: index * 0.1 }}
+            >
+              <Link 
+                to={item.path} 
+                className="text-gray-700 dark:text-gray-200 hover:text-primary dark:hover:text-primary transition-colors flex items-center"
+              >
+                {item.icon && item.icon}
+                {item.title}
+              </Link>
+            </motion.div>
+          ))}
         </div>
 
         <div className="flex items-center space-x-4">
@@ -113,7 +148,7 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
 
             {isThemeDropdownOpen && (
               <div 
-                className="absolute right-0 mt-2 w-40 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5"
+                className="absolute right-0 mt-2 w-40 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
                 onMouseLeave={() => setIsThemeDropdownOpen(false)}
               >
                 <button
@@ -166,6 +201,9 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
                   <Link to="/dashboard/profile">Profile</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
+                  <Link to="/tools">Tools</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
                   <Link to="/video-downloader">Video Downloader</Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
@@ -182,15 +220,17 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="default" size="sm" asChild>
-              <Link to="/login">
-                <LogIn className="mr-2 h-4 w-4" />
-                Login
-              </Link>
-            </Button>
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button variant="default" size="sm" asChild>
+                <Link to="/login">
+                  <LogIn className="mr-2 h-4 w-4" />
+                  Login
+                </Link>
+              </Button>
+            </motion.div>
           )}
         </div>
       </nav>
-    </header>
+    </motion.header>
   );
 }

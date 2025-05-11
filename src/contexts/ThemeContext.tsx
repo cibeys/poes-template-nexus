@@ -39,8 +39,11 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
   const { setTheme } = useTheme();
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const [themeSettings, setThemeSettings] = useState<ThemeSettings>(() => {
-    const savedTheme = localStorage.getItem('poes-theme-settings');
-    return savedTheme ? JSON.parse(savedTheme) : defaultThemeSettings;
+    if (typeof window !== 'undefined') {
+      const savedTheme = localStorage.getItem('tanoeluis-theme-settings');
+      return savedTheme ? JSON.parse(savedTheme) : defaultThemeSettings;
+    }
+    return defaultThemeSettings;
   });
 
   useEffect(() => {
@@ -48,11 +51,21 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
     setTheme(themeSettings.colorScheme);
     
     // Save settings to local storage
-    localStorage.setItem('poes-theme-settings', JSON.stringify(themeSettings));
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('tanoeluis-theme-settings', JSON.stringify(themeSettings));
+    }
     
     // Apply CSS variables for custom colors
     document.documentElement.style.setProperty('--primary-color', themeSettings.primaryColor);
     document.documentElement.style.setProperty('--surface-color', themeSettings.surfaceColor);
+    
+    // Apply preset class
+    document.body.classList.remove('preset-aura', 'preset-lara', 'preset-nora');
+    document.body.classList.add(`preset-${themeSettings.preset}`);
+    
+    // Apply menu type
+    document.body.classList.remove('menu-static', 'menu-overlay', 'menu-slim', 'menu-slim-plus');
+    document.body.classList.add(`menu-${themeSettings.menuType === 'slim+' ? 'slim-plus' : themeSettings.menuType}`);
     
   }, [themeSettings, setTheme]);
 
@@ -60,7 +73,25 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
     key: K, 
     value: ThemeSettings[K]
   ) => {
-    setThemeSettings(prev => ({ ...prev, [key]: value }));
+    setThemeSettings(prev => {
+      const newSettings = { ...prev, [key]: value };
+      
+      // Apply preset-specific settings if preset is changed
+      if (key === 'preset') {
+        if (value === 'aura') {
+          newSettings.primaryColor = '#8B5CF6';
+          newSettings.surfaceColor = '#f8fafc';
+        } else if (value === 'lara') {
+          newSettings.primaryColor = '#3B82F6';
+          newSettings.surfaceColor = '#ffffff';
+        } else if (value === 'nora') {
+          newSettings.primaryColor = '#D946EF';
+          newSettings.surfaceColor = '#121212';
+        }
+      }
+      
+      return newSettings;
+    });
   };
 
   const resetThemeSettings = () => {
@@ -77,7 +108,7 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
-    link.download = 'theme-config.json';
+    link.download = 'tanoeluis-theme-config.json';
     link.href = url;
     link.click();
   };
