@@ -1,6 +1,6 @@
 
 import React, { useState } from "react";
-import { Check, Palette, PlusCircle, Reset, XCircle } from "lucide-react";
+import { Check, Palette, PlusCircle, RotateCcw, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
@@ -12,6 +12,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function ThemeCustomizer() {
   const { 
@@ -129,7 +130,7 @@ export default function ThemeCustomizer() {
                         ? "ring-2 ring-primary ring-offset-2"
                         : "hover:border-primary"
                     }`}
-                    onClick={() => updateThemeSetting("preset", preset.value)}
+                    onClick={() => updateThemeSetting("preset", preset.value as "aura" | "lara" | "nora")}
                   >
                     <div className={`h-12 rounded-md mb-2 flex items-center justify-center ${preset.bgColor}`}>
                       {themeSettings.preset === preset.value && (
@@ -268,7 +269,7 @@ export default function ThemeCustomizer() {
             <AlertDialog>
               <AlertDialogTrigger asChild>
                 <Button variant="outline" className="w-full">
-                  <Reset className="mr-2 h-4 w-4" />
+                  <RotateCcw className="mr-2 h-4 w-4" />
                   Reset to Default
                 </Button>
               </AlertDialogTrigger>
@@ -316,13 +317,12 @@ export default function ThemeCustomizer() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
-            <Input
+            <Textarea 
               value={importConfig}
               onChange={(e) => setImportConfig(e.target.value)}
               className="font-mono text-xs"
               placeholder="{...}"
               rows={10}
-              multiline
             />
           </div>
           <div className="flex justify-end gap-2">

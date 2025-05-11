@@ -5,6 +5,7 @@ import { FileText, Layout, Users, Eye, Tag, User, ArrowUp, ArrowDown, Activity }
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
