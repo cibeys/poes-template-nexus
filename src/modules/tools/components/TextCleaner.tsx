@@ -1,167 +1,216 @@
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { 
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Copy, Check, Trash2, RefreshCw } from 'lucide-react';
-import { toast } from "@/hooks/use-toast";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowUpDown, Type, Trash2, Copy, Check, RefreshCw } from "lucide-react";
+import { motion } from "framer-motion";
 
 export default function TextCleaner() {
-  const [inputText, setInputText] = useState('');
-  const [outputText, setOutputText] = useState('');
+  const [text, setText] = useState("");
+  const [result, setResult] = useState("");
+  const [operation, setOperation] = useState("uppercase");
   const [copied, setCopied] = useState(false);
-  const [activeTab, setActiveTab] = useState('trim');
+  const { toast } = useToast();
 
-  const handleProcess = () => {
-    if (!inputText) {
+  const handleTransform = () => {
+    if (!text) {
       toast({
-        title: "Empty input",
-        description: "Please enter some text to process",
+        title: "Empty Text",
+        description: "Please enter some text to transform",
         variant: "destructive"
       });
       return;
     }
-    
-    let result = inputText;
-    
-    switch (activeTab) {
-      case 'trim':
-        result = result.trim().replace(/\s+/g, ' ');
-        break;
-      case 'uppercase':
-        result = result.toUpperCase();
-        break;
-      case 'lowercase':
-        result = result.toLowerCase();
-        break;
-      case 'capitalize':
-        result = result.replace(/\w\S*/g, txt => 
-          txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase()
-        );
-        break;
-      case 'remove-numbers':
-        result = result.replace(/[0-9]/g, '');
-        break;
-      case 'remove-special':
-        result = result.replace(/[^\w\s]/gi, '');
-        break;
-    }
-    
-    setOutputText(result);
-    toast({
-      title: "Text processed",
-      description: `Text has been ${activeTab === 'trim' ? 'trimmed' : activeTab.replace('-', ' ')}`,
-    });
-  };
 
-  const handleClear = () => {
-    setInputText('');
-    setOutputText('');
+    let transformedText = "";
+    switch (operation) {
+      case "uppercase":
+        transformedText = text.toUpperCase();
+        break;
+      case "lowercase":
+        transformedText = text.toLowerCase();
+        break;
+      case "capitalize":
+        transformedText = text.split(' ')
+          .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+          .join(' ');
+        break;
+      case "reverse":
+        transformedText = text.split('').reverse().join('');
+        break;
+      case "remove-spaces":
+        transformedText = text.replace(/\s+/g, '');
+        break;
+      case "remove-lines":
+        transformedText = text.replace(/\n+/g, ' ');
+        break;
+      case "count":
+        const chars = text.length;
+        const words = text.trim().split(/\s+/).length;
+        const lines = text.split('\n').length;
+        transformedText = `Characters: ${chars}\nWords: ${words}\nLines: ${lines}`;
+        break;
+      default:
+        transformedText = text;
+    }
+
+    setResult(transformedText);
+    toast({
+      title: "Text Transformed",
+      description: `Successfully applied ${operation} operation`,
+    });
   };
 
   const copyToClipboard = async () => {
     try {
-      await navigator.clipboard.writeText(outputText);
+      await navigator.clipboard.writeText(result);
       setCopied(true);
       toast({
-        title: "Copied!",
-        description: "Text copied to clipboard",
+        title: "Copied to clipboard",
+        description: "Text has been copied to your clipboard",
       });
       setTimeout(() => setCopied(false), 2000);
     } catch (err) {
       toast({
         title: "Failed to copy",
-        description: "Permission denied or clipboard API not available",
+        description: "Please try again or copy manually",
         variant: "destructive"
       });
     }
   };
 
+  const clearText = () => {
+    setText("");
+    setResult("");
+    toast({
+      title: "Cleared",
+      description: "Text fields have been cleared",
+    });
+  };
+
   return (
-    <Card className="shadow-lg animate-fade-in">
-      <CardHeader className="pb-3">
-        <CardTitle className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-          Text Cleaner
-        </CardTitle>
-        <CardDescription>
-          Clean and transform your text with various operations
-        </CardDescription>
-      </CardHeader>
-      
-      <CardContent className="space-y-4">
-        <div>
-          <label htmlFor="inputText" className="text-sm font-medium mb-2 block">Input Text</label>
-          <Textarea
-            id="inputText"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            placeholder="Paste your text here..."
-            className="min-h-[120px] font-mono text-sm"
-          />
-        </div>
-        
-        <Tabs 
-          value={activeTab} 
-          onValueChange={setActiveTab}
-          className="w-full"
-        >
-          <TabsList className="grid grid-cols-3 md:grid-cols-6 w-full">
-            <TabsTrigger value="trim">Trim</TabsTrigger>
-            <TabsTrigger value="uppercase">UPPERCASE</TabsTrigger>
-            <TabsTrigger value="lowercase">lowercase</TabsTrigger>
-            <TabsTrigger value="capitalize">Capitalize</TabsTrigger>
-            <TabsTrigger value="remove-numbers">No Numbers</TabsTrigger>
-            <TabsTrigger value="remove-special">No Special</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        <div className="flex justify-between">
-          <Button 
-            onClick={handleProcess} 
-            className="bg-gradient-to-r from-primary to-accent hover:from-primary/90 hover:to-accent/90"
-          >
-            <RefreshCw className="mr-2 h-4 w-4" />
-            Process Text
-          </Button>
+    <div className="container mx-auto py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl flex items-center">
+              <Type className="mr-2" /> Text Cleaner & Transformer
+            </CardTitle>
+            <CardDescription>
+              Clean, transform, and analyze text with various operations
+            </CardDescription>
+          </CardHeader>
           
-          <Button 
-            variant="outline" 
-            onClick={handleClear}
-          >
-            <Trash2 className="mr-2 h-4 w-4" />
-            Clear
-          </Button>
-        </div>
-        
-        <div>
-          <div className="flex justify-between items-center">
-            <label htmlFor="outputText" className="text-sm font-medium mb-2">Result</label>
-            {outputText && (
+          <CardContent className="space-y-6">
+            <div className="space-y-2">
+              <label className="font-medium">Select Operation</label>
+              <Select value={operation} onValueChange={setOperation}>
+                <SelectTrigger className="w-full md:w-[300px]">
+                  <SelectValue placeholder="Select operation" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="uppercase">UPPERCASE</SelectItem>
+                  <SelectItem value="lowercase">lowercase</SelectItem>
+                  <SelectItem value="capitalize">Capitalize Each Word</SelectItem>
+                  <SelectItem value="reverse">Reverse Text</SelectItem>
+                  <SelectItem value="remove-spaces">Remove Spaces</SelectItem>
+                  <SelectItem value="remove-lines">Remove Line Breaks</SelectItem>
+                  <SelectItem value="count">Count Characters/Words/Lines</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-2">
+                <label className="font-medium">Input Text</label>
+                <Textarea 
+                  placeholder="Enter your text here..." 
+                  value={text} 
+                  onChange={(e) => setText(e.target.value)}
+                  className="min-h-[200px] resize-y"
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <label className="font-medium">Result</label>
+                <Textarea 
+                  placeholder="Transformed text will appear here..." 
+                  value={result} 
+                  readOnly 
+                  className="min-h-[200px] resize-y bg-gray-50 dark:bg-gray-900"
+                />
+              </div>
+            </div>
+          </CardContent>
+          
+          <CardFooter className="flex flex-wrap gap-2">
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
               <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-8" 
+                onClick={handleTransform}
+                className="bg-primary hover:bg-primary/90"
+              >
+                <ArrowUpDown className="mr-2 h-4 w-4" />
+                Transform
+              </Button>
+            </motion.div>
+            
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
                 onClick={copyToClipboard}
+                variant="secondary"
+                disabled={!result}
               >
                 {copied ? (
-                  <Check className="h-4 w-4 mr-1" />
+                  <><Check className="mr-2 h-4 w-4" /> Copied</>
                 ) : (
-                  <Copy className="h-4 w-4 mr-1" />
+                  <><Copy className="mr-2 h-4 w-4" /> Copy Result</>
                 )}
-                {copied ? "Copied!" : "Copy"}
               </Button>
-            )}
-          </div>
-          <Textarea
-            id="outputText"
-            value={outputText}
-            readOnly
-            placeholder="Result will appear here..."
-            className="min-h-[120px] font-mono text-sm bg-muted/50"
-          />
-        </div>
-      </CardContent>
-    </Card>
+            </motion.div>
+            
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                onClick={clearText}
+                variant="outline"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear All
+              </Button>
+            </motion.div>
+            
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Button 
+                onClick={() => {setText(result); setResult("");}}
+                variant="ghost"
+                disabled={!result}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Use Result as Input
+              </Button>
+            </motion.div>
+          </CardFooter>
+        </Card>
+      </motion.div>
+    </div>
   );
 }
