@@ -13,23 +13,33 @@ export default function LocationFinder() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const googleScriptRef = useRef<HTMLScriptElement | null>(null);
   const { toast } = useToast();
 
   // Initialize Google Maps
   useEffect(() => {
+    // Check if script is already loaded
+    const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+    if (existingScript) {
+      // If script already exists, don't add another one
+      initMap();
+      return;
+    }
+
     // Function to load Google Maps API
     const loadGoogleMapsAPI = () => {
       const googleMapsScript = document.createElement('script');
-      googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBXDe0zEDI8JMV0NZYNOsWZzYZ-Yuetiy4&libraries=places`;
+      googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBXDe0zEDI8JMV0NZYNOsWZzYZ-Yuetiy4&libraries=places&loading=async`;
       googleMapsScript.async = true;
       googleMapsScript.defer = true;
       googleMapsScript.onload = initMap;
       document.head.appendChild(googleMapsScript);
+      googleScriptRef.current = googleMapsScript;
     };
 
     // Initialize map
-    const initMap = () => {
-      if (mapRef.current && !mapInstanceRef.current) {
+    function initMap() {
+      if (mapRef.current && !mapInstanceRef.current && window.google && window.google.maps) {
         // Default to a central location
         const defaultLocation = { lat: 40.7128, lng: -74.006 };
         
@@ -86,15 +96,26 @@ export default function LocationFinder() {
         }
         
         setMapLoaded(true);
+      } else if (!window.google || !window.google.maps) {
+        // If Google Maps is not loaded yet, try again
+        loadGoogleMapsAPI();
       }
-    };
+    }
 
-    loadGoogleMapsAPI();
+    // First try to initialize if Google Maps is already loaded
+    if (window.google && window.google.maps) {
+      initMap();
+    } else {
+      loadGoogleMapsAPI();
+    }
     
     return () => {
       // Clean up
+      if (markerRef.current) {
+        markerRef.current.setMap(null);
+        markerRef.current = null;
+      }
       mapInstanceRef.current = null;
-      markerRef.current = null;
     };
   }, [toast]);
 
@@ -113,7 +134,7 @@ export default function LocationFinder() {
 
     setLoading(true);
     
-    if (mapLoaded && mapInstanceRef.current) {
+    if (mapLoaded && mapInstanceRef.current && window.google && window.google.maps) {
       const geocoder = new google.maps.Geocoder();
       
       geocoder.geocode({ address: search }, (results, status) => {
@@ -197,7 +218,7 @@ export default function LocationFinder() {
             lng: position.coords.longitude
           };
           
-          if (mapInstanceRef.current) {
+          if (mapInstanceRef.current && window.google && window.google.maps) {
             mapInstanceRef.current.setCenter(userLocation);
             mapInstanceRef.current.setZoom(14);
             
@@ -221,15 +242,15 @@ export default function LocationFinder() {
             
             // Open info window
             infowindow.open(mapInstanceRef.current, markerRef.current);
-          }
           
-          // Reverse geocode to get address
-          const geocoder = new google.maps.Geocoder();
-          geocoder.geocode({ location: userLocation }, (results, status) => {
-            if (status === "OK" && results && results[0]) {
-              setSearch(results[0].formatted_address);
-            }
-          });
+            // Reverse geocode to get address
+            const geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ location: userLocation }, (results, status) => {
+              if (status === "OK" && results && results[0]) {
+                setSearch(results[0].formatted_address);
+              }
+            });
+          }
           
           setLoading(false);
         },
