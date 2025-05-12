@@ -1,267 +1,422 @@
 
-import { useState } from "react";
-import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Download, Eye, Check, Code, Layout, Users, Clock, Calendar } from "lucide-react";
-
-// Mock template data
-const templateData = {
-  id: 1,
-  title: "Dashboard Pro",
-  description: "Modern admin dashboard template with dark mode and responsive design.",
-  longDescription: "Dashboard Pro is a comprehensive admin dashboard template designed for modern web applications. It features a clean, intuitive interface with responsive layouts that work on all devices. The template includes a dark mode toggle, interactive charts, customizable widgets, and a variety of pre-built components to accelerate your development process.",
-  imageUrl: "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1480",
-  previewImages: [
-    "https://images.unsplash.com/photo-1517433670267-08bbd4be890f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1480",
-    "https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1470",
-    "https://images.unsplash.com/photo-1486312338219-ce68d2c6f44d?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1472",
-  ],
-  category: "Admin",
-  framework: "React",
-  tags: ["Dashboard", "Admin", "Dark Mode", "Responsive", "Charts", "Widgets"],
-  downloads: 1250,
-  featured: true,
-  version: "1.2.0",
-  lastUpdated: "2023-09-15",
-  author: {
-    name: "POES Team",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1470",
-  },
-  features: [
-    "Responsive design that works on all devices",
-    "Dark and light mode support",
-    "Interactive charts and graphs",
-    "Customizable widgets and components",
-    "Authentication pages (login, register, forgot password)",
-    "User management interfaces",
-    "Settings and configuration pages",
-    "Data tables with sorting and filtering",
-    "Form components with validation",
-    "Notification system"
-  ],
-  techStack: [
-    { name: "React", icon: "React" },
-    { name: "TypeScript", icon: "TypeScript" },
-    { name: "Tailwind CSS", icon: "TailwindCSS" },
-    { name: "Recharts", icon: "Charts" }
-  ],
-  relatedTemplates: [
-    {
-      id: 2,
-      title: "E-Commerce Starter",
-      description: "Complete e-commerce template with product listings, cart, and checkout.",
-      imageUrl: "https://images.unsplash.com/photo-1611186871348-b1ce696e52c9?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1470",
-      slug: "/templates/ecommerce-starter"
-    },
-    {
-      id: 5,
-      title: "SaaS Landing",
-      description: "High-converting SaaS landing page template with pricing tables and testimonials.",
-      imageUrl: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1470",
-      slug: "/templates/saas-landing"
-    }
-  ]
-};
+import { useEffect, useState } from "react";
+import { useParams, Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { 
+  Calendar, 
+  Download, 
+  Eye, 
+  ExternalLink, 
+  Github, 
+  Share2, 
+  ChevronLeft,
+  Heart,
+  HeartCrack,
+  BadgeCheck
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { motion, AnimatePresence } from "framer-motion";
+import { Template } from "@/types/supabase-custom";
+import TemplateLoader from "./TemplateLoader";
+import { nanoid } from "nanoid";
 
 export default function TemplateDetail() {
-  const { slug } = useParams();
-  const [activeImageIndex, setActiveImageIndex] = useState(0);
-  const [isDownloading, setIsDownloading] = useState(false);
+  const { slug } = useParams<{ slug: string }>();
+  const [template, setTemplate] = useState<Template | null>(null);
+  const [categories, setCategories] = useState<{id: string, name: string}[]>([]);
+  const [tags, setTags] = useState<{id: string, name: string}[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isLiked, setIsLiked] = useState(false);
+  const [showDownloadLoader, setShowDownloadLoader] = useState(false);
+  const { toast } = useToast();
+  const [sessionId] = useState(() => localStorage.getItem('template_session_id') || nanoid());
   
-  // In a real app, we would fetch the template by slug
-  // For now, we'll just use our mock data
-  
-  const handleDownload = () => {
-    setIsDownloading(true);
+  useEffect(() => {
+    // Store session ID in localStorage for download tracking
+    if (!localStorage.getItem('template_session_id')) {
+      localStorage.setItem('template_session_id', sessionId);
+    }
     
-    // Simulate download
-    setTimeout(() => {
-      setIsDownloading(false);
-    }, 1500);
+    fetchTemplate();
+  }, [slug]);
+
+  const fetchTemplate = async () => {
+    if (!slug) return;
+    
+    try {
+      setLoading(true);
+      
+      const { data: templateData, error: templateError } = await supabase
+        .from('templates')
+        .select('*')
+        .eq('slug', slug)
+        .single();
+      
+      if (templateError) throw templateError;
+      
+      if (templateData) {
+        setTemplate(templateData);
+        
+        // Fetch categories
+        const { data: categoryData } = await supabase
+          .from('template_category_relation')
+          .select(`
+            category_id,
+            template_categories (id, name)
+          `)
+          .eq('template_id', templateData.id);
+        
+        if (categoryData) {
+          const categories = categoryData.map(item => ({
+            id: item.category_id,
+            name: (item.template_categories as any).name
+          }));
+          setCategories(categories);
+        }
+        
+        // Check if liked (using local storage for demo)
+        const likedTemplates = JSON.parse(localStorage.getItem('liked_templates') || '[]');
+        setIsLiked(likedTemplates.includes(templateData.id));
+      }
+    } catch (error) {
+      console.error("Error fetching template details:", error);
+      toast({
+        title: "Error",
+        description: "Could not load the template details",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return (
-    <div className="container mx-auto px-4 md:px-6 py-12">
-      <Link
-        to="/templates"
-        className="inline-flex items-center text-gray-600 dark:text-gray-400 hover:text-primary dark:hover:text-primary transition-colors mb-8"
-      >
-        <ArrowLeft size={16} className="mr-1" /> Back to all templates
-      </Link>
+  const handleDownload = async () => {
+    if (!template) return;
+    
+    setShowDownloadLoader(true);
+    
+    try {
+      // Track download using our function
+      await supabase.rpc('increment_template_download', { temp_id: template.id });
       
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-8">
-            {/* Preview Image Gallery */}
-            <div>
-              <div className="aspect-[16/9] relative">
-                <img 
-                  src={templateData.previewImages[activeImageIndex]} 
-                  alt={templateData.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="flex p-4 space-x-3 overflow-auto">
-                {templateData.previewImages.map((image, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveImageIndex(index)}
-                    className={`w-20 h-14 rounded overflow-hidden flex-shrink-0 ${
-                      index === activeImageIndex ? "ring-2 ring-primary" : ""
-                    }`}
-                  >
-                    <img 
-                      src={image} 
-                      alt={`Preview ${index + 1}`}
-                      className="w-full h-full object-cover"
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden mb-8">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Description</h2>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {templateData.longDescription}
-              </p>
-              
-              <h3 className="text-xl font-medium mb-3">Features</h3>
-              <ul className="space-y-2 mb-6">
-                {templateData.features.map((feature, index) => (
-                  <li key={index} className="flex items-start">
-                    <Check size={18} className="mr-2 text-green-500 mt-0.5 flex-shrink-0" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-              </ul>
-              
-              <h3 className="text-xl font-medium mb-3">Tech Stack</h3>
-              <div className="flex flex-wrap gap-3 mb-6">
-                {templateData.techStack.map((tech) => (
-                  <div 
-                    key={tech.name}
-                    className="flex items-center px-3 py-1.5 bg-gray-100 dark:bg-gray-700 rounded-md"
-                  >
-                    {tech.icon === "React" && <Code size={16} className="mr-2" />}
-                    {tech.icon === "TypeScript" && <Code size={16} className="mr-2" />}
-                    {tech.icon === "TailwindCSS" && <Layout size={16} className="mr-2" />}
-                    {tech.icon === "Charts" && <Layout size={16} className="mr-2" />}
-                    {tech.name}
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden">
-            <div className="p-6">
-              <h2 className="text-2xl font-bold mb-4">Related Templates</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {templateData.relatedTemplates.map(template => (
-                  <Link
-                    key={template.id}
-                    to={template.slug}
-                    className="flex bg-gray-50 dark:bg-gray-700 rounded-lg overflow-hidden hover:shadow-md transition-shadow group"
-                  >
-                    <div className="w-1/3">
-                      <img 
-                        src={template.imageUrl} 
-                        alt={template.title}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div className="w-2/3 p-3">
-                      <h4 className="font-medium group-hover:text-primary transition-colors">
-                        {template.title}
-                      </h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
-                        {template.description}
-                      </p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
+      // Simulate download delay for demo purposes
+      setTimeout(() => {
+        // In a real app, you would redirect to the actual download URL
+        if (template.download_url) {
+          window.open(template.download_url, '_blank');
+        }
         
-        <div className="lg:col-span-1">
-          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden sticky top-24">
-            <div className="p-6">
-              <h1 className="text-2xl font-bold mb-2">{templateData.title}</h1>
-              <p className="text-gray-600 dark:text-gray-400 mb-6">
-                {templateData.description}
-              </p>
-              
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Category</span>
-                  <span className="font-medium">{templateData.category}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Framework</span>
-                  <span className="font-medium">{templateData.framework}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Version</span>
-                  <span className="font-medium">{templateData.version}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500 dark:text-gray-400">Downloads</span>
-                  <span className="font-medium">{templateData.downloads.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-500 dark:text-gray-400">Last Updated</span>
-                  <span className="font-medium flex items-center">
-                    <Calendar size={14} className="mr-1" />
-                    {templateData.lastUpdated}
-                  </span>
-                </div>
-              </div>
-              
-              <div className="border-t dark:border-gray-700 pt-6 mb-6">
-                <div className="flex items-center mb-4">
-                  <img 
-                    src={templateData.author.avatar}
-                    alt={templateData.author.name}
-                    className="w-8 h-8 rounded-full mr-3"
-                  />
-                  <div>
-                    <span className="text-sm text-gray-500 dark:text-gray-400">Created by</span>
-                    <p className="font-medium">{templateData.author.name}</p>
-                  </div>
-                </div>
-              </div>
-              
-              <div className="space-y-3">
-                <button
-                  onClick={handleDownload}
-                  className="w-full py-3 bg-primary text-white rounded-md flex items-center justify-center gap-2 hover:bg-primary/90 transition-colors"
-                  disabled={isDownloading}
-                >
-                  {isDownloading ? (
-                    <>
-                      <Check size={18} /> Downloaded
-                    </>
-                  ) : (
-                    <>
-                      <Download size={18} /> Download Template
-                    </>
-                  )}
-                </button>
-                <a
-                  href="#"
-                  className="w-full py-3 border border-gray-300 dark:border-gray-700 rounded-md flex items-center justify-center gap-2 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                >
-                  <Eye size={18} /> Live Preview
-                </a>
-              </div>
-            </div>
+        setTimeout(() => {
+          setShowDownloadLoader(false);
+        }, 5000); // Keep showing the loader/ad for 5 more seconds
+      }, 3000);
+    } catch (error) {
+      console.error("Error tracking download:", error);
+      setShowDownloadLoader(false);
+    }
+  };
+
+  const toggleLike = () => {
+    if (!template) return;
+    
+    const likedTemplates = JSON.parse(localStorage.getItem('liked_templates') || '[]');
+    
+    if (isLiked) {
+      const updatedLikes = likedTemplates.filter((id: string) => id !== template.id);
+      localStorage.setItem('liked_templates', JSON.stringify(updatedLikes));
+      setIsLiked(false);
+      toast({
+        title: "Template unliked",
+        description: "This template has been removed from your favorites",
+      });
+    } else {
+      likedTemplates.push(template.id);
+      localStorage.setItem('liked_templates', JSON.stringify(likedTemplates));
+      setIsLiked(true);
+      toast({
+        title: "Template liked",
+        description: "This template has been added to your favorites",
+      });
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-12">
+        <div className="animate-pulse space-y-6 max-w-6xl mx-auto">
+          <div className="h-10 w-2/3 bg-gray-200 dark:bg-gray-800 rounded"></div>
+          <div className="h-80 bg-gray-200 dark:bg-gray-800 rounded"></div>
+          <div className="space-y-3">
+            <div className="h-4 w-full bg-gray-200 dark:bg-gray-800 rounded"></div>
+            <div className="h-4 w-4/5 bg-gray-200 dark:bg-gray-800 rounded"></div>
+            <div className="h-4 w-2/3 bg-gray-200 dark:bg-gray-800 rounded"></div>
           </div>
         </div>
       </div>
+    );
+  }
+
+  if (!template) {
+    return (
+      <div className="container mx-auto px-4 py-12 text-center">
+        <h2 className="text-2xl font-bold mb-4">Template Not Found</h2>
+        <p className="mb-6 text-gray-600 dark:text-gray-400">The template you're looking for doesn't exist or has been removed.</p>
+        <Button asChild>
+          <Link to="/templates">
+            <ChevronLeft className="mr-2 h-4 w-4" />
+            Browse Templates
+          </Link>
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-12">
+      <div className="max-w-6xl mx-auto">
+        {/* Navigation */}
+        <div className="mb-6">
+          <Link 
+            to="/templates" 
+            className="flex items-center text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors"
+          >
+            <ChevronLeft className="h-4 w-4 mr-1" />
+            Back to Templates
+          </Link>
+        </div>
+        
+        {/* Template Header */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="mb-8"
+        >
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl md:text-4xl font-bold mb-4">{template.title}</h1>
+              
+              <div className="flex flex-wrap gap-2 mb-4">
+                {categories.map((category) => (
+                  <Badge key={category.id}>{category.name}</Badge>
+                ))}
+                
+                {template.is_premium && (
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 dark:bg-amber-700 dark:text-amber-100 flex items-center gap-1">
+                    <BadgeCheck className="h-3.5 w-3.5" /> Premium
+                  </Badge>
+                )}
+              </div>
+              
+              <div className="flex items-center text-sm text-gray-500 dark:text-gray-400 space-x-4">
+                <span className="flex items-center">
+                  <Eye className="h-4 w-4 mr-1.5" />
+                  {Math.floor(Math.random() * 1000) + 100} views
+                </span>
+                <span className="flex items-center">
+                  <Download className="h-4 w-4 mr-1.5" />
+                  {template.download_count || 0} downloads
+                </span>
+                <span className="flex items-center">
+                  <Calendar className="h-4 w-4 mr-1.5" />
+                  {new Date(template.created_at || '').toLocaleDateString()}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex space-x-2">
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={toggleLike}
+                >
+                  <AnimatePresence mode="wait">
+                    {isLiked ? (
+                      <motion.div
+                        key="liked"
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.5, opacity: 0 }}
+                      >
+                        <Heart className="h-4 w-4 fill-red-500 text-red-500" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="unliked"
+                        initial={{ scale: 0.5, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0.5, opacity: 0 }}
+                      >
+                        <Heart className="h-4 w-4" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </Button>
+              </motion.div>
+              
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="icon">
+                  <Share2 className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Template Preview */}
+        <motion.div
+          className="mb-8 rounded-lg overflow-hidden shadow-lg"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+        >
+          <img 
+            src={template.thumbnail || 'https://images.unsplash.com/photo-1517433670267-08bbd4be890f?ixlib=rb-4.0.3&auto=format&fit=crop&q=80&w=1480'}
+            alt={template.title} 
+            className="w-full h-auto object-cover aspect-[16/9]"
+          />
+        </motion.div>
+        
+        {/* Template Content */}
+        <div className="grid md:grid-cols-[1fr_300px] gap-8">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.3 }}
+            className="space-y-6"
+          >
+            <div>
+              <h2 className="text-2xl font-semibold mb-4">Description</h2>
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
+                {template.description || 'No description provided for this template.'}
+              </p>
+            </div>
+            
+            {template.tech_stack && template.tech_stack.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-semibold mb-4">Tech Stack</h2>
+                <div className="flex flex-wrap gap-2">
+                  {template.tech_stack.map((tech, index) => (
+                    <Badge key={index} variant="outline">{tech}</Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <h2 className="text-2xl font-semibold mb-4">Features</h2>
+              <ul className="space-y-2 list-disc pl-5 text-gray-700 dark:text-gray-300">
+                <li>Fully responsive design for all devices</li>
+                <li>Modern and clean user interface</li>
+                <li>Built with popular frameworks for easy customization</li>
+                <li>Well-documented code for easy maintenance</li>
+                <li>SEO optimized structure</li>
+              </ul>
+            </div>
+          </motion.div>
+          
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+            className="space-y-6"
+          >
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-semibold mb-4">Template Details</h3>
+              
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">Type:</span>
+                  <span className="font-medium">{template.is_premium ? 'Premium' : 'Free'}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">Released:</span>
+                  <span className="font-medium">{new Date(template.created_at || '').toLocaleDateString()}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">Last Updated:</span>
+                  <span className="font-medium">{new Date(template.updated_at || template.created_at || '').toLocaleDateString()}</span>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <span className="text-gray-500 dark:text-gray-400">Downloads:</span>
+                  <span className="font-medium">{template.download_count || 0}</span>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-3">
+                  <motion.div
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <Button 
+                      className="w-full" 
+                      size="lg"
+                      onClick={handleDownload}
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Download Template
+                    </Button>
+                  </motion.div>
+                  
+                  {template.github_url && (
+                    <motion.div
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => window.open(template.github_url as string, '_blank')}
+                      >
+                        <Github className="mr-2 h-4 w-4" />
+                        View on GitHub
+                      </Button>
+                    </motion.div>
+                  )}
+                  
+                  {template.preview_url && (
+                    <motion.div
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                    >
+                      <Button 
+                        variant="outline" 
+                        className="w-full"
+                        onClick={() => window.open(template.preview_url as string, '_blank')}
+                      >
+                        <ExternalLink className="mr-2 h-4 w-4" />
+                        Live Preview
+                      </Button>
+                    </motion.div>
+                  )}
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-gradient-to-br from-primary/20 to-accent/20 dark:from-primary/10 dark:to-accent/10 rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-2">Need Support?</h3>
+              <p className="text-gray-700 dark:text-gray-300 text-sm mb-4">
+                Having trouble with this template? Our support team is ready to help!
+              </p>
+              <Button variant="secondary" className="w-full">
+                Contact Support
+              </Button>
+            </div>
+          </motion.div>
+        </div>
+      </div>
+      
+      <AnimatePresence>
+        {showDownloadLoader && <TemplateLoader />}
+      </AnimatePresence>
     </div>
   );
 }

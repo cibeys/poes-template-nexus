@@ -10,8 +10,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import CodeBlock from './CodeBlock';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
+import { nanoid } from 'nanoid';
 
 // Define blog post interface
 interface BlogPost {
@@ -36,173 +36,6 @@ interface BlogPost {
   }[];
 }
 
-// Mock blog post data - replace with Supabase data in production
-const mockBlogPost: BlogPost = {
-  id: "1",
-  title: "Understanding React Hooks: A Comprehensive Guide",
-  content: `
-  # Understanding React Hooks
-
-  React Hooks were introduced in React 16.8 and have completely changed how we build React components. In this post, we'll explore the most common hooks and how to use them effectively.
-
-  ## useState Hook
-
-  The \`useState\` hook allows you to add state to your functional components. Let's see a basic example:
-
-  \`\`\`jsx
-  import React, { useState } from 'react';
-  
-  function Counter() {
-    const [count, setCount] = useState(0);
-    
-    return (
-      <div>
-        <p>You clicked {count} times</p>
-        <button onClick={() => setCount(count + 1)}>
-          Click me
-        </button>
-      </div>
-    );
-  }
-  \`\`\`
-
-  ## useEffect Hook
-
-  The \`useEffect\` hook lets you perform side effects in functional components. Here's how you might use it:
-
-  \`\`\`jsx
-  import React, { useState, useEffect } from 'react';
-  
-  function Example() {
-    const [data, setData] = useState(null);
-    
-    useEffect(() => {
-      const fetchData = async () => {
-        const response = await fetch('https://api.example.com/data');
-        const json = await response.json();
-        setData(json);
-      };
-      
-      fetchData();
-    }, []); // Empty dependency array means this effect runs once on mount
-    
-    return (
-      <div>
-        {data ? (
-          <p>Data loaded: {JSON.stringify(data)}</p>
-        ) : (
-          <p>Loading...</p>
-        )}
-      </div>
-    );
-  }
-  \`\`\`
-
-  ## useContext Hook
-
-  The \`useContext\` hook allows you to access context data without wrapping your components in context consumers.
-
-  \`\`\`jsx
-  import React, { useContext } from 'react';
-  import { ThemeContext } from './theme-context';
-  
-  function ThemedButton() {
-    const theme = useContext(ThemeContext);
-    
-    return (
-      <button style={{ background: theme.background, color: theme.foreground }}>
-        Styled by theme context!
-      </button>
-    );
-  }
-  \`\`\`
-
-  ## useReducer Hook
-
-  The \`useReducer\` hook is an alternative to \`useState\` when you have complex state logic:
-
-  \`\`\`jsx
-  import React, { useReducer } from 'react';
-  
-  // Reducer function
-  function counterReducer(state, action) {
-    switch (action.type) {
-      case 'increment':
-        return { count: state.count + 1 };
-      case 'decrement':
-        return { count: state.count - 1 };
-      default:
-        throw new Error();
-    }
-  }
-  
-  function Counter() {
-    const [state, dispatch] = useReducer(counterReducer, { count: 0 });
-    
-    return (
-      <div>
-        Count: {state.count}
-        <button onClick={() => dispatch({ type: 'decrement' })}>-</button>
-        <button onClick={() => dispatch({ type: 'increment' })}>+</button>
-      </div>
-    );
-  }
-  \`\`\`
-
-  ## Custom Hooks
-
-  One of the great features of hooks is the ability to create your own custom hooks:
-
-  \`\`\`jsx
-  import { useState, useEffect } from 'react';
-
-  function useWindowSize() {
-    const [windowSize, setWindowSize] = useState({
-      width: undefined,
-      height: undefined,
-    });
-    
-    useEffect(() => {
-      function handleResize() {
-        setWindowSize({
-          width: window.innerWidth,
-          height: window.innerHeight,
-        });
-      }
-      
-      window.addEventListener('resize', handleResize);
-      handleResize(); // Call once to set initial size
-      
-      return () => window.removeEventListener('resize', handleResize);
-    }, []);
-    
-    return windowSize;
-  }
-  \`\`\`
-
-  ## Conclusion
-
-  React Hooks have revolutionized the way we build React components, making functional components more powerful and reducing the need for class components. By understanding and applying hooks effectively, you'll write cleaner, more maintainable React code.
-  `,
-  excerpt: "Learn how to effectively use React Hooks in your functional components and build cleaner React applications.",
-  author_id: "1",
-  featured_image: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80",
-  publish_date: "2023-05-15",
-  slug: "understanding-react-hooks",
-  view_count: 1240,
-  created_at: "2023-05-10",
-  author: {
-    full_name: "Jane Smith",
-    username: "janesmith",
-    avatar_url: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80"
-  },
-  categories: [
-    { name: "React", slug: "react" },
-    { name: "JavaScript", slug: "javascript" },
-    { name: "Frontend", slug: "frontend" }
-  ]
-};
-
 export default function BlogPost() {
   const { slug } = useParams<{ slug: string }>();
   const [post, setPost] = useState<BlogPost | null>(null);
@@ -213,6 +46,14 @@ export default function BlogPost() {
   const [relatedPosts, setRelatedPosts] = useState<BlogPost[]>([]);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [sessionId] = useState(() => localStorage.getItem('blog_session_id') || nanoid());
+  
+  useEffect(() => {
+    // Store session ID in localStorage for view tracking
+    if (!localStorage.getItem('blog_session_id')) {
+      localStorage.setItem('blog_session_id', sessionId);
+    }
+  }, [sessionId]);
 
   useEffect(() => {
     fetchBlogPost();
@@ -221,76 +62,44 @@ export default function BlogPost() {
   const fetchBlogPost = async () => {
     setLoading(true);
     
+    if (!slug) {
+      setError("Blog post not found");
+      setLoading(false);
+      return;
+    }
+    
     try {
-      // Fetch from Supabase if connected, otherwise use mock data
-      try {
-        const { data, error } = await supabase
-          .from('blog_posts')
-          .select(`
-            *,
-            author:profiles(full_name, username, avatar_url)
-          `)
-          .eq('slug', slug)
-          .single();
-          
-        if (error) throw error;
+      // Fetch from Supabase
+      const { data, error } = await supabase
+        .from('blog_posts')
+        .select(`
+          *,
+          author:profiles(full_name, username, avatar_url)
+        `)
+        .eq('slug', slug)
+        .single();
         
-        if (data) {
-          setPost(data);
-          // Update view count
-          await supabase
-            .from('blog_posts')
-            .update({ view_count: (data.view_count || 0) + 1 })
-            .eq('id', data.id);
-            
-          // Fetch related posts based on categories
-          fetchRelatedPosts(data);
-          return;
-        }
-      } catch (dbError) {
-        console.error("Database error:", dbError);
-        // Fall back to mock data if database not available
-      }
+      if (error) throw error;
       
-      // Use mock data if no database or for development
-      setPost(mockBlogPost);
-      // Mock related posts
-      setRelatedPosts([
-        {
-          id: '2',
-          title: 'Advanced React Patterns for Beginners',
-          excerpt: 'Learn advanced React patterns that every beginner should know about',
-          featured_image: 'https://images.unsplash.com/photo-1558669038-1b1bc1dc76d2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-          author_id: '2',
-          publish_date: '2023-04-15',
-          slug: 'advanced-react-patterns',
-          view_count: 850,
-          content: '',
-          created_at: '2023-04-10',
-          author: {
-            full_name: 'John Doe',
-            username: 'johndoe',
-            avatar_url: 'https://images.unsplash.com/photo-1599566150163-29194dcaad36?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=687&q=80'
-          },
-        },
-        {
-          id: '3',
-          title: 'CSS Tips and Tricks for Modern Websites',
-          excerpt: 'Modern CSS techniques to make your websites look stunning',
-          featured_image: 'https://images.unsplash.com/photo-1507721999472-8ed4421c4af2?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=1170&q=80',
-          author_id: '3',
-          publish_date: '2023-05-20',
-          slug: 'css-tips-tricks',
-          view_count: 1120,
-          content: '',
-          created_at: '2023-05-15',
-          author: {
-            full_name: 'Alice Johnson',
-            username: 'alicej',
-            avatar_url: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&auto=format&fit=crop&w=761&q=80'
-          },
+      if (data) {
+        setPost(data);
+        
+        // Track view using our database function
+        try {
+          await supabase.rpc('increment_blog_view', { 
+            post_id: data.id,
+            session: sessionId
+          });
+        } catch (viewError) {
+          console.error("Error tracking view:", viewError);
         }
-      ]);
+            
+        // Fetch related posts based on categories
+        fetchRelatedPosts(data);
+        return;
+      } else {
+        setError("Blog post not found");
+      }
     } catch (err) {
       console.error("Error fetching blog post:", err);
       setError("Failed to load blog post");
@@ -300,7 +109,6 @@ export default function BlogPost() {
   };
   
   const fetchRelatedPosts = async (currentPost: BlogPost) => {
-    // Real implementation would fetch based on categories or tags
     try {
       const { data, error } = await supabase
         .from('blog_posts')
@@ -309,6 +117,7 @@ export default function BlogPost() {
           author:profiles(full_name, username, avatar_url)
         `)
         .neq('id', currentPost.id)
+        .order('view_count', { ascending: false })
         .limit(3);
         
       if (error) throw error;
@@ -369,12 +178,18 @@ export default function BlogPost() {
   if (error) {
     return (
       <div className="container mx-auto px-4 py-12 text-center">
-        <h2 className="text-2xl font-bold mb-4">Error Loading Blog Post</h2>
-        <p className="mb-6">{error}</p>
-        <Button onClick={() => navigate('/blog')}>
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back to Blog
-        </Button>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+        >
+          <h2 className="text-2xl font-bold mb-4">Error Loading Blog Post</h2>
+          <p className="mb-6">{error}</p>
+          <Button onClick={() => navigate('/blog')}>
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Blog
+          </Button>
+        </motion.div>
       </div>
     );
   }
@@ -412,15 +227,39 @@ export default function BlogPost() {
         // Process regular markdown (very basic implementation)
         return part.split('\n').map((line, lineIndex) => {
           if (line.startsWith('# ')) {
-            return <h1 key={lineIndex} className="text-3xl font-bold my-6">{line.substring(2)}</h1>;
+            return <motion.h1 
+              key={lineIndex}
+              className="text-3xl font-bold my-6"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: lineIndex * 0.03 }}
+            >{line.substring(2)}</motion.h1>;
           } else if (line.startsWith('## ')) {
-            return <h2 key={lineIndex} className="text-2xl font-bold my-5">{line.substring(3)}</h2>;
+            return <motion.h2 
+              key={lineIndex} 
+              className="text-2xl font-bold my-5"
+              initial={{ opacity: 0, x: -15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: lineIndex * 0.03 }}
+            >{line.substring(3)}</motion.h2>;
           } else if (line.startsWith('### ')) {
-            return <h3 key={lineIndex} className="text-xl font-bold my-4">{line.substring(4)}</h3>;
+            return <motion.h3 
+              key={lineIndex} 
+              className="text-xl font-bold my-4"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.5, delay: lineIndex * 0.03 }}
+            >{line.substring(4)}</motion.h3>;
           } else if (line.trim() === '') {
             return <br key={lineIndex} />;
           } else {
-            return <p key={lineIndex} className="my-4 leading-relaxed">{line}</p>;
+            return <motion.p 
+              key={lineIndex} 
+              className="my-4 leading-relaxed"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.3, delay: lineIndex * 0.02 }}
+            >{line}</motion.p>;
           }
         });
       }
@@ -431,12 +270,24 @@ export default function BlogPost() {
     <div className="bg-gray-50 dark:bg-gray-900/50 min-h-screen pb-16">
       {/* Hero section with featured image */}
       <div className="relative w-full h-[40vh] md:h-[50vh] overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/40 z-10" />
-        <img 
-          src={post.featured_image} 
-          alt={post.title} 
-          className="w-full h-full object-cover" 
+        <motion.div 
+          className="absolute inset-0 bg-gradient-to-b from-black/70 to-black/40 z-10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
         />
+        <motion.div
+          initial={{ scale: 1.1 }}
+          animate={{ scale: 1 }}
+          transition={{ duration: 1.5 }}
+          className="h-full w-full"
+        >
+          <img 
+            src={post.featured_image} 
+            alt={post.title} 
+            className="w-full h-full object-cover" 
+          />
+        </motion.div>
         <div className="absolute inset-0 flex items-center justify-center z-20">
           <div className="container px-4 text-center">
             <motion.h1 
@@ -504,10 +355,27 @@ export default function BlogPost() {
                 className="p-0 h-auto hover:bg-transparent hover:text-primary"
                 onClick={toggleBookmark}
               >
-                {bookmarked ? 
-                  <BookmarkCheck className="h-4 w-4 text-primary" /> : 
-                  <Bookmark className="h-4 w-4" />
-                }
+                <AnimatePresence mode="wait">
+                  {bookmarked ? (
+                    <motion.div
+                      key="bookmarked"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                    >
+                      <BookmarkCheck className="h-4 w-4 text-primary" />
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="not-bookmarked"
+                      initial={{ scale: 0.8, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0.8, opacity: 0 }}
+                    >
+                      <Bookmark className="h-4 w-4" />
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </Button>
             </div>
           </div>
@@ -525,25 +393,33 @@ export default function BlogPost() {
           <div className="pt-4">
             <h4 className="text-lg font-semibold mb-4">Share this post</h4>
             <div className="flex flex-wrap gap-2">
-              <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank')}>
-                <Facebook className="h-4 w-4 mr-2" />
-                Facebook
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 dark:hover:text-sky-400" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`, '_blank')}>
-                <Twitter className="h-4 w-4 mr-2" />
-                Twitter
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 dark:hover:text-blue-400" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank')}>
-                <Linkedin className="h-4 w-4 mr-2" />
-                LinkedIn
-              </Button>
-              <Button variant="outline" size="sm" className="hover:bg-gray-100 dark:hover:bg-gray-700" onClick={copyLink}>
-                {copied ? (
-                  <><Check className="h-4 w-4 mr-2" /> Copied</>
-                ) : (
-                  <><Copy className="h-4 w-4 mr-2" /> Copy Link</>
-                )}
-              </Button>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-900/20 dark:hover:text-blue-400" onClick={() => window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`, '_blank')}>
+                  <Facebook className="h-4 w-4 mr-2" />
+                  Facebook
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="sm" className="hover:bg-sky-50 hover:text-sky-600 dark:hover:bg-sky-900/20 dark:hover:text-sky-400" onClick={() => window.open(`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(post.title)}`, '_blank')}>
+                  <Twitter className="h-4 w-4 mr-2" />
+                  Twitter
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="sm" className="hover:bg-blue-50 hover:text-blue-700 dark:hover:bg-blue-900/20 dark:hover:text-blue-400" onClick={() => window.open(`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareUrl)}`, '_blank')}>
+                  <Linkedin className="h-4 w-4 mr-2" />
+                  LinkedIn
+                </Button>
+              </motion.div>
+              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                <Button variant="outline" size="sm" className="hover:bg-gray-100 dark:hover:bg-gray-700" onClick={copyLink}>
+                  {copied ? (
+                    <><Check className="h-4 w-4 mr-2" /> Copied</>
+                  ) : (
+                    <><Copy className="h-4 w-4 mr-2" /> Copy Link</>
+                  )}
+                </Button>
+              </motion.div>
             </div>
           </div>
         </div>
@@ -553,18 +429,20 @@ export default function BlogPost() {
           <div className="mt-12">
             <h2 className="text-2xl font-bold mb-6">Related Posts</h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {relatedPosts.map((relatedPost) => (
+              {relatedPosts.map((relatedPost, index) => (
                 <motion.div
                   key={relatedPost.id}
                   className="bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-shadow"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.5, delay: index * 0.1 }}
                   whileHover={{ y: -5 }}
-                  transition={{ duration: 0.2 }}
                 >
                   <div className="h-48 overflow-hidden">
                     <img
                       src={relatedPost.featured_image}
                       alt={relatedPost.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transform hover:scale-105 transition-transform duration-500"
                     />
                   </div>
                   <div className="p-4">
