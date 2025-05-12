@@ -1,6 +1,6 @@
 
 export interface TemplateListProps {
-  searchQuery: string;
+  searchQuery?: string;
 }
 
 export interface Template {

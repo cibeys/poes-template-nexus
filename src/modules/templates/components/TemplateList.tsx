@@ -1,7 +1,7 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Eye, Download, Search, Filter, Check } from "lucide-react";
+import { TemplateListProps } from "../types";
 
 // Mock data for templates
 const templates = [
@@ -259,12 +259,17 @@ function TemplateCard({ template }: TemplateCardProps) {
   );
 }
 
-export default function TemplateList() {
-  const [searchTerm, setSearchTerm] = useState("");
+export default function TemplateList({ searchQuery = "" }: TemplateListProps) {
+  const [searchTerm, setSearchTerm] = useState(searchQuery);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [selectedFramework, setSelectedFramework] = useState("");
   const [showFeaturedOnly, setShowFeaturedOnly] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  
+  // Update searchTerm when searchQuery prop changes
+  useEffect(() => {
+    setSearchTerm(searchQuery);
+  }, [searchQuery]);
   
   const filteredTemplates = templates.filter(template => {
     // Apply search filter
