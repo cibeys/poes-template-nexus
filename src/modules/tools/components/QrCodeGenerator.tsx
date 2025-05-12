@@ -1,4 +1,3 @@
-
 import { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { QrCode, Link as LinkIcon, FileText, Mail, Phone, MapPin, Download, Check } from 'lucide-react';
-import QRCode from 'qrcode.react';
+import { QRCodeCanvas } from 'qrcode.react';
 
 type QrType = 'url' | 'text' | 'email' | 'phone' | 'location';
 type QrLevel = 'L' | 'M' | 'Q' | 'H';
@@ -374,7 +373,7 @@ export default function QrCodeGenerator() {
                 className="p-4 bg-white rounded-lg flex items-center justify-center mb-5"
                 style={{ width: qrSize + 20, height: qrSize + 20 }}
               >
-                <QRCode
+                <QRCodeCanvas
                   id="qr-code"
                   value={getQrValue()}
                   size={qrSize}

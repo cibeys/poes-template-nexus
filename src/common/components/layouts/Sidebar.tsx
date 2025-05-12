@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare, Moon, Sun, Laptop, Settings, Tool } from "lucide-react";
+import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare, Moon, Sun, Laptop, Settings, Wrench } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
 
 interface SidebarProps {
@@ -140,12 +140,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
             </Dropdown>
 
             <Dropdown
-              icon={<Tool size={18} />}
+              icon={<Wrench size={18} />}
               title="Tools"
               defaultOpen={location.pathname.startsWith("/tools")}
             >
               <NavItem
-                icon={<Tool size={16} />}
+                icon={<Wrench size={16} />}
                 title="All Tools"
                 href="/tools"
                 isActive={isActive("/tools")}
