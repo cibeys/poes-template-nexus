@@ -7,10 +7,10 @@ import NewsletterSection from "../modules/home/components/NewsletterSection";
 import MainLayout from "../common/components/layouts/MainLayout";
 import Hero3DScene from "../modules/home/components/3DHeroScene";
 import { motion } from "framer-motion";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export default function Index() {
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useIsMobile();
   
   return (
     <MainLayout>
