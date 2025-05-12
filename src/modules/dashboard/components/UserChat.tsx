@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -27,23 +26,23 @@ export default function UserChat() {
       
       setLoading(true);
       try {
+        // Use an RPC to get messages
         const { data, error } = await supabase
-          .from('chat_messages')
-          .select(`
-            id, 
-            user_id, 
-            admin_id, 
-            message, 
-            is_read, 
-            created_at, 
-            profiles:admin_id(full_name, avatar_url, username)
-          `)
-          .or(`user_id.eq.${user.id},admin_id.eq.${user.id}`)
-          .order('created_at', { ascending: true });
+          .rpc('get_user_messages', { user_id_param: user.id });
 
         if (error) throw error;
 
         setMessages(data as ChatMessage[]);
+        
+        // Mark messages as read
+        const unreadMessageIds = data
+          .filter((msg: ChatMessage) => !msg.is_read && msg.admin_id)
+          .map((msg: ChatMessage) => msg.id);
+          
+        if (unreadMessageIds.length > 0) {
+          await supabase
+            .rpc('mark_user_messages_as_read', { message_ids: unreadMessageIds });
+        }
       } catch (error: any) {
         console.error("Error fetching messages:", error.message);
         toast({
@@ -67,6 +66,13 @@ export default function UserChat() {
           // Add the new message to the state
           // @ts-ignore
           setMessages(prev => [...prev, payload.new as ChatMessage]);
+          
+          // Mark the message as read
+          if (payload.new && payload.new.id) {
+            supabase
+              .rpc('mark_user_messages_as_read', { message_ids: [payload.new.id] })
+              .then();
+          }
         }
       )
       .subscribe();
@@ -87,24 +93,22 @@ export default function UserChat() {
     if (!message.trim() || !user) return;
     
     try {
-      const newMessage = {
-        user_id: user.id,
-        message: message.trim(),
-        is_read: false,
-      };
-      
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert(newMessage);
+      // Use an RPC to send message
+      const { data, error } = await supabase
+        .rpc('send_user_message', {
+          message_text: message.trim(),
+          from_user_id: user.id
+        });
         
       if (error) throw error;
       
       // Add message to state with optimistic update
       const optimisticMessage: ChatMessage = {
-        ...newMessage,
         id: Date.now().toString(),
-        created_at: new Date().toISOString(),
-        is_read: false
+        user_id: user.id,
+        message: message.trim(),
+        is_read: false,
+        created_at: new Date().toISOString()
       };
 
       setMessages([...messages, optimisticMessage]);

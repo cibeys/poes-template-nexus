@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -20,6 +19,7 @@ import { ThemeCustomizerProvider, useThemeCustomizer } from "@/contexts/ThemeCon
 import ThemeCustomizer from "@/modules/dashboard/components/ThemeCustomizer";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
+import { ChatMessageTable } from "@/modules/templates/types";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -42,24 +42,17 @@ const DashboardLayoutContent = ({ children }: DashboardLayoutProps) => {
         if (isAdmin) {
           // For admin, count all unread messages from users
           const { data, error } = await supabase
-            .from('chat_messages')
-            .select('id', { count: 'exact' })
-            .is('admin_id', null)
-            .eq('is_read', false);
+            .rpc('count_unread_admin_messages');
             
           if (error) throw error;
-          setUnreadCount(data?.length || 0);
+          setUnreadCount(data || 0);
         } else {
           // For regular users, count unread messages from admins
           const { data, error } = await supabase
-            .from('chat_messages')
-            .select('id', { count: 'exact' })
-            .eq('user_id', user.id)
-            .is('admin_id', 'not.null')
-            .eq('is_read', false);
+            .rpc('count_unread_user_messages', { user_id: user.id });
             
           if (error) throw error;
-          setUnreadCount(data?.length || 0);
+          setUnreadCount(data || 0);
         }
       } catch (error) {
         console.error('Error fetching unread count:', error);

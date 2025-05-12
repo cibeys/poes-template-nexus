@@ -1,4 +1,3 @@
-
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,12 +12,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { ChatMessage } from "@/modules/templates/types";
 import { motion } from "framer-motion";
+import { Profile } from "@/types/supabase-custom";
+
+// Add a type for user with messages
+interface UserWithMessages {
+  id: string;
+  full_name?: string;
+  avatar_url?: string;
+  username?: string;
+  unreadCount: number;
+  lastMessage: string;
+  lastActivity: string;
+}
 
 export default function AdminChat() {
   const [activeChat, setActiveChat] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<UserWithMessages[]>([]);
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
   const { toast } = useToast();
@@ -29,59 +40,29 @@ export default function AdminChat() {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        // Get all messages
+        // Get users with messages using an RPC
         const { data, error } = await supabase
-          .from('chat_messages')
-          .select(`
-            id, 
-            user_id, 
-            admin_id, 
-            message, 
-            is_read, 
-            created_at, 
-            profiles:user_id(full_name, avatar_url, username)
-          `)
-          .order('created_at', { ascending: false });
+          .rpc('get_users_with_messages');
 
         if (error) throw error;
-
-        // Get unique user IDs from messages
-        const uniqueUserIds = [...new Set(data.map(msg => msg.user_id))];
         
-        // Filter out the admin's own ID
-        const filteredUserIds = uniqueUserIds.filter(id => id !== user?.id);
-        
-        if (filteredUserIds.length > 0) {
-          const { data: profilesData, error: profilesError } = await supabase
-            .from('profiles')
-            .select('id, full_name, avatar_url, username')
-            .in('id', filteredUserIds);
-
-          if (profilesError) throw profilesError;
-
-          // Count unread messages for each user
-          const usersWithUnreadCount = profilesData.map(profile => {
-            const userMessages = data.filter(msg => msg.user_id === profile.id);
-            const unreadCount = userMessages.filter(msg => !msg.is_read && !msg.admin_id).length;
-            
-            return {
-              ...profile,
-              unreadCount,
-              lastMessage: userMessages[0]?.message || "",
-              lastActivity: userMessages[0]?.created_at || ""
-            };
-          });
+        if (Array.isArray(data) && data.length > 0) {
+          // Filter out the admin's own ID and format data
+          const usersWithData = data.filter((user: any) => user.id !== user?.id).map((u: any) => ({
+            id: u.id,
+            full_name: u.full_name || u.username || 'User',
+            avatar_url: u.avatar_url,
+            username: u.username,
+            unreadCount: u.unread_count || 0,
+            lastMessage: u.last_message || "",
+            lastActivity: u.last_activity || new Date().toISOString()
+          }));
           
-          // Sort by last activity
-          usersWithUnreadCount.sort((a, b) => 
-            new Date(b.lastActivity).getTime() - new Date(a.lastActivity).getTime()
-          );
-          
-          setUsers(usersWithUnreadCount);
+          setUsers(usersWithData);
           
           // Set active chat to first user if none selected
-          if (!activeChat && usersWithUnreadCount.length > 0) {
-            setActiveChat(usersWithUnreadCount[0].id);
+          if (!activeChat && usersWithData.length > 0) {
+            setActiveChat(usersWithData[0].id);
           }
         }
       } catch (error: any) {
@@ -120,34 +101,24 @@ export default function AdminChat() {
       if (!activeChat) return;
       
       try {
+        // Use an RPC to get messages for this user and admin
         const { data, error } = await supabase
-          .from('chat_messages')
-          .select(`
-            id, 
-            user_id, 
-            admin_id, 
-            message, 
-            is_read, 
-            created_at, 
-            profiles:user_id(full_name, avatar_url, username)
-          `)
-          .or(`user_id.eq.${activeChat},admin_id.eq.${activeChat}`)
-          .order('created_at', { ascending: true });
+          .rpc('get_chat_messages_with_user', { user_id_param: activeChat });
 
         if (error) throw error;
 
-        setMessages(data as ChatMessage[]);
-        
-        // Mark messages as read
-        const unreadMessageIds = data
-          .filter(msg => !msg.is_read && msg.user_id === activeChat && !msg.admin_id)
-          .map(msg => msg.id);
+        if (Array.isArray(data)) {
+          setMessages(data as ChatMessage[]);
           
-        if (unreadMessageIds.length > 0) {
-          await supabase
-            .from('chat_messages')
-            .update({ is_read: true, admin_id: user?.id })
-            .in('id', unreadMessageIds);
+          // Mark messages as read
+          const unreadMessageIds = data
+            .filter(msg => !msg.is_read && msg.user_id === activeChat && !msg.admin_id)
+            .map(msg => msg.id);
+            
+          if (unreadMessageIds.length > 0) {
+            await supabase
+              .rpc('mark_messages_as_read', { message_ids: unreadMessageIds, admin_id_param: user?.id });
+          }
         }
         
       } catch (error: any) {
@@ -173,11 +144,14 @@ export default function AdminChat() {
             setMessages(prev => [...prev, payload.new as ChatMessage]);
             
             // Mark message as read
-            supabase
-              .from('chat_messages')
-              .update({ is_read: true, admin_id: user?.id })
-              .eq('id', payload.new.id)
-              .then();
+            if (payload.new && payload.new.id) {
+              supabase
+                .rpc('mark_messages_as_read', { 
+                  message_ids: [payload.new.id], 
+                  admin_id_param: user?.id 
+                })
+                .then();
+            }
           }
         )
         .subscribe();
@@ -199,23 +173,22 @@ export default function AdminChat() {
     if (!message.trim() || !activeChat || !user) return;
     
     try {
-      const newMessage = {
-        user_id: user.id,
-        admin_id: activeChat,
-        message: message.trim(),
-        is_read: false,
-      };
-      
-      const { error } = await supabase
-        .from('chat_messages')
-        .insert(newMessage);
+      // Use an RPC to send a message
+      const { data, error } = await supabase
+        .rpc('send_admin_message', {
+          to_user_id: activeChat,
+          message_text: message.trim(),
+          from_admin_id: user.id
+        });
         
       if (error) throw error;
       
       // Add message to state with optimistic update
       const optimisticMessage: ChatMessage = {
-        ...newMessage,
         id: Date.now().toString(),
+        user_id: user.id,
+        admin_id: activeChat,
+        message: message.trim(),
         created_at: new Date().toISOString(),
         is_read: false,
         user: {

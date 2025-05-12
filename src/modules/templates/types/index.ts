@@ -40,3 +40,14 @@ export interface ChatMessage {
     username?: string;
   }
 }
+
+// Define chat message table structure from the database
+export interface ChatMessageTable {
+  id: string;
+  user_id: string;
+  admin_id?: string | null;
+  message: string;
+  is_read: boolean;
+  created_at: string;
+  updated_at?: string;
+}
