@@ -1,8 +1,7 @@
 
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Menu, Sun, Moon, Laptop, ChevronDown, LogIn, UserCircle, Download, MessageSquare, Wrench } from "lucide-react";
-import { useTheme } from "../ThemeProvider";
+import { Menu, LogIn, UserCircle, Download, MessageSquare, Wrench } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import {
@@ -19,10 +18,8 @@ interface NavbarProps {
 }
 
 export default function Navbar({ onToggleSidebar }: NavbarProps) {
-  const { theme, setTheme } = useTheme();
   const { user, profile, signOut, isAdmin } = useAuth();
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isThemeDropdownOpen, setIsThemeDropdownOpen] = useState(false);
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -134,53 +131,7 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <button
-              onClick={() => setIsThemeDropdownOpen(!isThemeDropdownOpen)}
-              className="flex items-center p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-800"
-              aria-label="Toggle theme"
-            >
-              {theme === "light" && <Sun size={18} />}
-              {theme === "dark" && <Moon size={18} />}
-              {theme === "system" && <Laptop size={18} />}
-              <ChevronDown size={16} className="ml-1" />
-            </button>
-
-            {isThemeDropdownOpen && (
-              <div 
-                className="absolute right-0 mt-2 w-40 rounded-md shadow-lg py-1 bg-white dark:bg-gray-800 ring-1 ring-black ring-opacity-5 z-50"
-                onMouseLeave={() => setIsThemeDropdownOpen(false)}
-              >
-                <button
-                  onClick={() => {
-                    setTheme("light");
-                    setIsThemeDropdownOpen(false);
-                  }}
-                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <Sun size={16} className="mr-2" /> Light
-                </button>
-                <button
-                  onClick={() => {
-                    setTheme("dark");
-                    setIsThemeDropdownOpen(false);
-                  }}
-                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <Moon size={16} className="mr-2" /> Dark
-                </button>
-                <button
-                  onClick={() => {
-                    setTheme("system");
-                    setIsThemeDropdownOpen(false);
-                  }}
-                  className="flex items-center w-full px-4 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <Laptop size={16} className="mr-2" /> System
-                </button>
-              </div>
-            )}
-          </div>
+          {/* Removed theme switcher dropdown */}
 
           {user ? (
             <DropdownMenu open={isUserDropdownOpen} onOpenChange={setIsUserDropdownOpen}>
@@ -190,7 +141,6 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
                     <AvatarImage src={profile?.avatar_url || ''} />
                     <AvatarFallback>{getInitials()}</AvatarFallback>
                   </Avatar>
-                  <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
@@ -208,6 +158,9 @@ export default function Navbar({ onToggleSidebar }: NavbarProps) {
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
                   <Link to="/ai-chat">AI Chat</Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to="/dashboard/chat">Support Chat</Link>
                 </DropdownMenuItem>
                 {isAdmin && (
                   <DropdownMenuItem asChild>

@@ -1,7 +1,8 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare } from "lucide-react";
+import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare, Moon, Sun, Laptop, Settings, Tool } from "lucide-react";
+import { useTheme } from "../ThemeProvider";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -61,6 +62,7 @@ function Dropdown({ icon, title, children, defaultOpen = false }: DropdownProps)
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
+  const { theme, setTheme } = useTheme();
 
   return (
     <>
@@ -90,73 +92,130 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
           </button>
         </div>
 
-        <nav className="p-4 space-y-2">
-          <NavItem
-            icon={<Home size={18} />}
-            title="Home"
-            href="/"
-            isActive={isActive("/")}
-          />
-          
-          <Dropdown
-            icon={<FileText size={18} />}
-            title="Blog"
-            defaultOpen={location.pathname.startsWith("/blog")}
-          >
+        <div className="flex flex-col h-[calc(100%-64px)]">
+          <nav className="p-4 space-y-2 flex-grow overflow-y-auto">
             <NavItem
-              icon={<FileText size={16} />}
-              title="All Posts"
-              href="/blog"
-              isActive={isActive("/blog")}
+              icon={<Home size={18} />}
+              title="Home"
+              href="/"
+              isActive={isActive("/")}
             />
+            
+            <Dropdown
+              icon={<FileText size={18} />}
+              title="Blog"
+              defaultOpen={location.pathname.startsWith("/blog")}
+            >
+              <NavItem
+                icon={<FileText size={16} />}
+                title="All Posts"
+                href="/blog"
+                isActive={isActive("/blog")}
+              />
+              <NavItem
+                icon={<Heart size={16} />}
+                title="Popular Posts"
+                href="/blog/popular"
+                isActive={isActive("/blog/popular")}
+              />
+            </Dropdown>
+
+            <Dropdown
+              icon={<Layout size={18} />}
+              title="Templates"
+              defaultOpen={location.pathname.startsWith("/templates")}
+            >
+              <NavItem
+                icon={<Layout size={16} />}
+                title="All Templates"
+                href="/templates"
+                isActive={isActive("/templates")}
+              />
+              <NavItem
+                icon={<Heart size={16} />}
+                title="Featured"
+                href="/templates/featured"
+                isActive={isActive("/templates/featured")}
+              />
+            </Dropdown>
+
+            <Dropdown
+              icon={<Tool size={18} />}
+              title="Tools"
+              defaultOpen={location.pathname.startsWith("/tools")}
+            >
+              <NavItem
+                icon={<Tool size={16} />}
+                title="All Tools"
+                href="/tools"
+                isActive={isActive("/tools")}
+              />
+            </Dropdown>
+
             <NavItem
-              icon={<Heart size={16} />}
-              title="Popular Posts"
-              href="/blog/popular"
-              isActive={isActive("/blog/popular")}
+              icon={<Download size={18} />}
+              title="Video Downloader"
+              href="/video-downloader"
+              isActive={isActive("/video-downloader")}
             />
-          </Dropdown>
 
-          <Dropdown
-            icon={<Layout size={18} />}
-            title="Templates"
-            defaultOpen={location.pathname.startsWith("/templates")}
-          >
             <NavItem
-              icon={<Layout size={16} />}
-              title="All Templates"
-              href="/templates"
-              isActive={isActive("/templates")}
+              icon={<MessageSquare size={18} />}
+              title="AI Chat"
+              href="/ai-chat"
+              isActive={isActive("/ai-chat")}
             />
+
             <NavItem
-              icon={<Heart size={16} />}
-              title="Featured"
-              href="/templates/featured"
-              isActive={isActive("/templates/featured")}
+              icon={<User size={18} />}
+              title="About"
+              href="/about"
+              isActive={isActive("/about")}
             />
-          </Dropdown>
+          </nav>
 
-          <NavItem
-            icon={<Download size={18} />}
-            title="Video Downloader"
-            href="/video-downloader"
-            isActive={isActive("/video-downloader")}
-          />
-
-          <NavItem
-            icon={<MessageSquare size={18} />}
-            title="AI Chat"
-            href="/ai-chat"
-            isActive={isActive("/ai-chat")}
-          />
-
-          <NavItem
-            icon={<User size={18} />}
-            title="About"
-            href="/about"
-            isActive={isActive("/about")}
-          />
-        </nav>
+          {/* Theme switcher at the bottom */}
+          <div className="p-4 border-t dark:border-gray-800">
+            <div className="flex flex-col gap-2">
+              <p className="text-sm text-muted-foreground">Theme</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setTheme("light")}
+                  className={`flex items-center justify-center p-2 rounded-md flex-1 ${
+                    theme === "light" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                  title="Light mode"
+                >
+                  <Sun size={18} />
+                </button>
+                <button
+                  onClick={() => setTheme("dark")}
+                  className={`flex items-center justify-center p-2 rounded-md flex-1 ${
+                    theme === "dark" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                  title="Dark mode"
+                >
+                  <Moon size={18} />
+                </button>
+                <button
+                  onClick={() => setTheme("system")}
+                  className={`flex items-center justify-center p-2 rounded-md flex-1 ${
+                    theme === "system" 
+                      ? "bg-primary text-primary-foreground" 
+                      : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                  }`}
+                  title="System preference"
+                >
+                  <Laptop size={18} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       </aside>
     </>
   );
