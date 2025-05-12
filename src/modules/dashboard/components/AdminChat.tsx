@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -54,7 +55,7 @@ export default function AdminChat() {
               full_name: u.full_name || u.username || 'User',
               avatar_url: u.avatar_url,
               username: u.username,
-              unreadCount: u.unread_count || 0,
+              unread_count: u.unread_count || 0,
               lastMessage: u.last_message || "",
               lastActivity: u.last_activity || new Date().toISOString()
             })) || [];
@@ -268,8 +269,8 @@ export default function AdminChat() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between">
                           <p className="font-medium truncate">{u.full_name || u.username}</p>
-                          {u.unreadCount > 0 && (
-                            <Badge className="ml-2">{u.unreadCount}</Badge>
+                          {u.unread_count > 0 && (
+                            <Badge className="ml-2">{u.unread_count}</Badge>
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground truncate">
@@ -315,8 +316,8 @@ export default function AdminChat() {
                          "User"}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        {users.find(u => u.id === activeChat)?.unreadCount > 0
-                          ? `${users.find(u => u.id === activeChat)?.unreadCount} unread messages`
+                        {users.find(u => u.id === activeChat)?.unread_count > 0
+                          ? `${users.find(u => u.id === activeChat)?.unread_count} unread messages`
                           : "All caught up"}
                       </p>
                     </div>

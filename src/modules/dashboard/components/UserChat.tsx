@@ -1,3 +1,4 @@
+
 import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -184,8 +185,8 @@ export default function UserChat() {
                     >
                       {msg.user_id !== user?.id && (
                         <Avatar className="h-8 w-8 mr-2">
-                          <AvatarImage src={msg.user?.avatar_url} />
-                          <AvatarFallback>{getInitials(msg.user?.full_name || "Admin")}</AvatarFallback>
+                          <AvatarImage src="" />
+                          <AvatarFallback>{getInitials("Admin")}</AvatarFallback>
                         </Avatar>
                       )}
                       <div
