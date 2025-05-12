@@ -12,6 +12,8 @@ import AdminCategories from "@/modules/dashboard/components/AdminCategories";
 import UserPosts from "@/modules/dashboard/components/UserPosts";
 import VideoDownloader from "./VideoDownloader";
 import AIChat from "./AIChat";
+import AdminChat from "@/modules/dashboard/components/AdminChat";
+import UserChat from "@/modules/dashboard/components/UserChat";
 
 export default function Dashboard() {
   const { user, loading, isAdmin } = useAuth();
@@ -44,6 +46,7 @@ export default function Dashboard() {
         <Route path="/posts" element={<UserPosts />} />
         <Route path="/video-downloader" element={<VideoDownloader />} />
         <Route path="/ai-chat" element={<AIChat />} />
+        <Route path="/chat" element={isAdmin ? <AdminChat /> : <UserChat />} />
         
         {/* Admin only routes */}
         {isAdmin ? (

@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
   LayoutDashboard, Users, FileText, Layout, User, 
-  LogOut, Menu, X, ChevronDown, Tag, Settings
+  LogOut, Menu, X, ChevronDown, Tag, Settings, MessageCircle
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { ThemeCustomizerProvider, useThemeCustomizer } from "@/contexts/ThemeContext";
 import ThemeCustomizer from "@/modules/dashboard/components/ThemeCustomizer";
+import { supabase } from "@/integrations/supabase/client";
+import { Badge } from "@/components/ui/badge";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -29,6 +31,58 @@ const DashboardLayoutContent = ({ children }: DashboardLayoutProps) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { toggleCustomizer } = useThemeCustomizer();
+  const [unreadCount, setUnreadCount] = useState(0);
+  
+  // Get unread messages count
+  useEffect(() => {
+    if (!user) return;
+    
+    const fetchUnreadCount = async () => {
+      try {
+        if (isAdmin) {
+          // For admin, count all unread messages from users
+          const { data, error } = await supabase
+            .from('chat_messages')
+            .select('id', { count: 'exact' })
+            .is('admin_id', null)
+            .eq('is_read', false);
+            
+          if (error) throw error;
+          setUnreadCount(data?.length || 0);
+        } else {
+          // For regular users, count unread messages from admins
+          const { data, error } = await supabase
+            .from('chat_messages')
+            .select('id', { count: 'exact' })
+            .eq('user_id', user.id)
+            .is('admin_id', 'not.null')
+            .eq('is_read', false);
+            
+          if (error) throw error;
+          setUnreadCount(data?.length || 0);
+        }
+      } catch (error) {
+        console.error('Error fetching unread count:', error);
+      }
+    };
+    
+    fetchUnreadCount();
+    
+    // Set up real-time listener
+    const channel = supabase
+      .channel('chat-unread')
+      .on('postgres_changes', 
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        payload => {
+          fetchUnreadCount();
+        }
+      )
+      .subscribe();
+      
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, isAdmin]);
   
   const handleSignOut = async () => {
     const success = await signOut();
@@ -133,6 +187,28 @@ const DashboardLayoutContent = ({ children }: DashboardLayoutProps) => {
               >
                 <FileText size={20} />
                 {isSidebarOpen && <span className="ml-3">My Posts</span>}
+              </Link>
+              
+              <Link 
+                to="/dashboard/chat" 
+                className={`flex items-center p-2 rounded-lg ${
+                  isActiveRoute("/dashboard/chat") 
+                    ? "bg-primary/10 text-primary dark:bg-primary/20" 
+                    : "hover:bg-gray-100 dark:hover:bg-gray-800"
+                }`}
+              >
+                <MessageCircle size={20} />
+                {isSidebarOpen && (
+                  <div className="ml-3 flex-1 flex justify-between items-center">
+                    <span>{isAdmin ? "Support Chat" : "Chat with Support"}</span>
+                    {unreadCount > 0 && (
+                      <Badge variant="destructive" className="ml-2">{unreadCount}</Badge>
+                    )}
+                  </div>
+                )}
+                {!isSidebarOpen && unreadCount > 0 && (
+                  <Badge variant="destructive" className="ml-2">{unreadCount}</Badge>
+                )}
               </Link>
               
               {isAdmin && (

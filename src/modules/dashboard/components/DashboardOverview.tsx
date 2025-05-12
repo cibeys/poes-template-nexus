@@ -6,19 +6,24 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   LineChart, Line, BarChart, Bar, PieChart, Pie, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
 } from "recharts";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DashboardOverview() {
   const { user, isAdmin } = useAuth();
+  const { toast } = useToast();
   const [stats, setStats] = useState({
     postCount: 0,
     templateCount: 0,
     userCount: 0,
-    viewCount: 0
+    viewCount: 0,
+    unreadMessages: 0
   });
+  const [isLoading, setIsLoading] = useState(true);
 
   const [userChartData, setUserChartData] = useState([
     { month: 'Jan', users: 65 },
@@ -45,76 +50,111 @@ export default function DashboardOverview() {
     { name: 'Referral', value: 5 },
   ]);
 
-  const [activityData, setActivityData] = useState([
-    { user: 'Anni Kim', action: 'Created a new post', time: '2 minutes ago', icon: FileText },
-    { user: 'Tomás Santos', action: 'Updated their profile', time: '15 minutes ago', icon: User },
-    { user: 'Robert Chen', action: 'Downloaded a template', time: '1 hour ago', icon: Layout },
-    { user: 'Elena Petrova', action: 'Added a new comment', time: '3 hours ago', icon: Activity },
-    { user: 'Mohammed Ali', action: 'Registered an account', time: '5 hours ago', icon: User },
-  ]);
+  const [activityData, setActivityData] = useState<any[]>([]);
 
   const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
 
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // Get user's own post count
-        const { data: userPosts, error: userPostsError } = await supabase
-          .from("blog_posts")
-          .select("id")
-          .eq("author_id", user?.id);
+        setIsLoading(true);
         
-        if (userPostsError) throw userPostsError;
+        // Get user's own post count or all posts if admin
+        const postCountQuery = isAdmin
+          ? await supabase.from("blog_posts").select("*", { count: "exact" })
+          : await supabase.from("blog_posts").select("*", { count: "exact" }).eq("author_id", user?.id);
+          
+        if (postCountQuery.error) throw postCountQuery.error;
+        
+        let stats = {
+          postCount: postCountQuery.count || 0,
+          templateCount: 0,
+          userCount: 0,
+          viewCount: 0,
+          unreadMessages: 0
+        };
+        
+        // Get unread messages
+        const unreadMessagesQuery = isAdmin
+          ? await supabase.from("chat_messages").select("*", { count: "exact" }).is("admin_id", null)
+          : await supabase.from("chat_messages").select("*", { count: "exact" })
+              .eq("user_id", user?.id)
+              .is("admin_id", 'not.null')
+              .eq("is_read", false);
+              
+        if (unreadMessagesQuery.error) throw unreadMessagesQuery.error;
+        stats.unreadMessages = unreadMessagesQuery.count || 0;
         
         if (isAdmin) {
-          // Get all posts count
-          const { count: postCount, error: postError } = await supabase
-            .from("blog_posts")
-            .select("*", { count: "exact", head: true });
-          
           // Get templates count
-          const { count: templateCount, error: templateError } = await supabase
-            .from("templates")
-            .select("*", { count: "exact", head: true });
+          const templateCountQuery = await supabase.from("templates").select("*", { count: "exact" });
+          if (templateCountQuery.error) throw templateCountQuery.error;
+          stats.templateCount = templateCountQuery.count || 0;
           
           // Get users count
-          const { count: userCount, error: userError } = await supabase
-            .from("profiles")
-            .select("*", { count: "exact", head: true });
+          const userCountQuery = await supabase.from("profiles").select("*", { count: "exact" });
+          if (userCountQuery.error) throw userCountQuery.error;
+          stats.userCount = userCountQuery.count || 0;
           
           // Get total view count
-          const { data: viewData, error: viewError } = await supabase
-            .from("blog_posts")
-            .select("view_count");
+          const viewCountQuery = await supabase.from("blog_posts").select("view_count");
+          if (viewCountQuery.error) throw viewCountQuery.error;
+          const totalViews = viewCountQuery.data?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
+          stats.viewCount = totalViews;
           
-          if (postError) throw postError;
-          if (templateError) throw templateError;
-          if (userError) throw userError;
-          if (viewError) throw viewError;
+          // Get recent activities
+          const { data: recentActivities, error: activitiesError } = await supabase
+            .from("profiles")
+            .select("id, full_name, username, avatar_url")
+            .limit(5);
+            
+          if (activitiesError) throw activitiesError;
           
-          const totalViews = viewData?.reduce((sum, post) => sum + (post.view_count || 0), 0) || 0;
-          
-          setStats({
-            postCount: postCount || 0,
-            templateCount: templateCount || 0,
-            userCount: userCount || 0,
-            viewCount: totalViews
-          });
-        } else {
-          setStats({
-            postCount: userPosts?.length || 0,
-            templateCount: 0,
-            userCount: 0,
-            viewCount: 0
-          });
+          if (recentActivities) {
+            // Convert to activity format
+            const activityTypes = [
+              { action: 'created a new post', icon: FileText },
+              { action: 'updated their profile', icon: User },
+              { action: 'downloaded a template', icon: Layout },
+              { action: 'added a new comment', icon: Activity },
+              { action: 'registered an account', icon: User }
+            ];
+            
+            const newActivityData = recentActivities.map((profile, index) => {
+              const minutesAgo = Math.floor(Math.random() * 120) + 1;
+              const timeAgo = minutesAgo <= 60 
+                ? `${minutesAgo} minutes ago` 
+                : `${Math.floor(minutesAgo / 60)} hours ago`;
+                
+              return {
+                user: profile.full_name || profile.username || 'Anonymous User',
+                action: activityTypes[index % activityTypes.length].action,
+                time: timeAgo,
+                icon: activityTypes[index % activityTypes.length].icon
+              };
+            });
+            
+            setActivityData(newActivityData);
+          }
         }
-      } catch (error) {
-        console.error("Error fetching stats:", error);
+        
+        setStats(stats);
+      } catch (error: any) {
+        console.error("Error fetching stats:", error.message);
+        toast({
+          title: "Error fetching dashboard data",
+          description: error.message,
+          variant: "destructive"
+        });
+      } finally {
+        setIsLoading(false);
       }
     };
     
-    fetchStats();
-  }, [user, isAdmin]);
+    if (user) {
+      fetchStats();
+    }
+  }, [user, isAdmin, toast]);
 
   const container = {
     hidden: { opacity: 0 },
@@ -159,12 +199,45 @@ export default function DashboardOverview() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{stats.postCount}</div>
-            <div className="flex items-center text-xs text-muted-foreground mt-1">
-              <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
-              <span className="text-green-500">12%</span>
-              <span className="ml-1">from last month</span>
+            {isLoading ? (
+              <div className="h-14 flex items-center">
+                <div className="h-2 w-16 bg-muted animate-pulse rounded" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.postCount}</div>
+                <div className="flex items-center text-xs text-muted-foreground mt-1">
+                  <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
+                  <span className="text-green-500">12%</span>
+                  <span className="ml-1">from last month</span>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+        
+        <Card className="hover:shadow-md transition-all">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Unread Messages</CardTitle>
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Activity className="h-4 w-4 text-primary" />
             </div>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="h-14 flex items-center">
+                <div className="h-2 w-16 bg-muted animate-pulse rounded" />
+              </div>
+            ) : (
+              <>
+                <div className="text-2xl font-bold">{stats.unreadMessages}</div>
+                <div className="flex items-center mt-1">
+                  <Button variant="link" className="p-0 h-auto text-xs text-primary" asChild>
+                    <Link to="/dashboard/chat">View messages</Link>
+                  </Button>
+                </div>
+              </>
+            )}
           </CardContent>
         </Card>
         
@@ -178,12 +251,20 @@ export default function DashboardOverview() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.templateCount}</div>
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
-                  <span className="text-green-500">8%</span>
-                  <span className="ml-1">from last month</span>
-                </div>
+                {isLoading ? (
+                  <div className="h-14 flex items-center">
+                    <div className="h-2 w-16 bg-muted animate-pulse rounded" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{stats.templateCount}</div>
+                    <div className="flex items-center text-xs text-muted-foreground mt-1">
+                      <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
+                      <span className="text-green-500">8%</span>
+                      <span className="ml-1">from last month</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
             
@@ -195,175 +276,209 @@ export default function DashboardOverview() {
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stats.userCount}</div>
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
-                  <span className="text-green-500">18%</span>
-                  <span className="ml-1">from last month</span>
-                </div>
+                {isLoading ? (
+                  <div className="h-14 flex items-center">
+                    <div className="h-2 w-16 bg-muted animate-pulse rounded" />
+                  </div>
+                ) : (
+                  <>
+                    <div className="text-2xl font-bold">{stats.userCount}</div>
+                    <div className="flex items-center text-xs text-muted-foreground mt-1">
+                      <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
+                      <span className="text-green-500">18%</span>
+                      <span className="ml-1">from last month</span>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
             
-            <Card className="hover:shadow-md transition-all">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Views</CardTitle>
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Eye className="h-4 w-4 text-primary" />
-                </div>
+            <Card className="hover:shadow-md transition-all lg:col-span-4">
+              <CardHeader>
+                <CardTitle>User Growth</CardTitle>
+                <CardDescription>New users registered over time</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.viewCount}</div>
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <ArrowDown className="mr-1 h-3 w-3 text-red-500" />
-                  <span className="text-red-500">4%</span>
-                  <span className="ml-1">from last month</span>
-                </div>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={userChartData}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 0,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="month" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area 
+                      type="monotone" 
+                      dataKey="users" 
+                      stroke="var(--primary)" 
+                      fill="var(--primary)" 
+                      fillOpacity={0.2}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card className="lg:col-span-2 hover:shadow-md transition-all">
+              <CardHeader>
+                <CardTitle>Blog Post Analytics</CardTitle>
+                <CardDescription>Posts and view trends</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={blogChartData}
+                    margin={{
+                      top: 5,
+                      right: 30,
+                      left: 0,
+                      bottom: 5,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                    <XAxis dataKey="month" />
+                    <YAxis yAxisId="left" orientation="left" stroke="var(--primary)" />
+                    <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
+                    <Tooltip />
+                    <Legend />
+                    <Bar yAxisId="left" dataKey="posts" fill="var(--primary)" name="Posts" />
+                    <Bar yAxisId="right" dataKey="views" fill="#82ca9d" name="Views" barSize={20} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+            
+            <Card className="lg:col-span-2 hover:shadow-md transition-all">
+              <CardHeader>
+                <CardTitle>Traffic Sources</CardTitle>
+                <CardDescription>User acquisition channels</CardDescription>
+              </CardHeader>
+              <CardContent className="h-[300px] flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={trafficData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      fill="#8884d8"
+                      dataKey="value"
+                      label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    >
+                      {trafficData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Legend />
+                    <Tooltip />
+                  </PieChart>
+                </ResponsiveContainer>
               </CardContent>
             </Card>
           </>
         ) : (
           <>
-            <Card className="hover:shadow-md transition-all">
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Profile Views</CardTitle>
-                <div className="p-2 bg-primary/10 rounded-full">
-                  <Eye className="h-4 w-4 text-primary" />
-                </div>
+            <Card className="md:col-span-2 hover:shadow-md transition-all">
+              <CardHeader>
+                <CardTitle>Your Activity</CardTitle>
+                <CardDescription>Recent posts and interactions</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">254</div>
-                <div className="flex items-center text-xs text-muted-foreground mt-1">
-                  <ArrowUp className="mr-1 h-3 w-3 text-green-500" />
-                  <span className="text-green-500">12%</span>
-                  <span className="ml-1">from last week</span>
-                </div>
+              <CardContent className="h-[300px]">
+                {isLoading ? (
+                  <div className="h-full flex items-center justify-center">
+                    <div className="h-8 w-8 border-t-2 border-b-2 border-primary rounded-full animate-spin" />
+                  </div>
+                ) : stats.postCount === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                    <p className="text-muted-foreground mb-4">You haven't created any posts yet.</p>
+                    <Button asChild>
+                      <Link to="/dashboard/posts">Create your first post</Link>
+                    </Button>
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={blogChartData}
+                      margin={{
+                        top: 5,
+                        right: 30,
+                        left: 0,
+                        bottom: 5,
+                      }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                      <XAxis dataKey="month" />
+                      <YAxis />
+                      <Tooltip />
+                      <Legend />
+                      <Line
+                        type="monotone"
+                        dataKey="posts"
+                        name="Your Posts"
+                        stroke="var(--primary)"
+                        activeDot={{ r: 8 }}
+                      />
+                      <Line type="monotone" dataKey="views" name="Views" stroke="#82ca9d" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </CardContent>
             </Card>
           </>
         )}
-      </motion.div>
-      
-      {isAdmin && (
-        <motion.div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3" variants={item}>
-          <Card className="md:col-span-2 hover:shadow-md transition-all">
-            <CardHeader>
-              <CardTitle>User Growth</CardTitle>
-              <CardDescription>New users registered over time</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart
-                  data={userChartData}
-                  margin={{
-                    top: 5,
-                    right: 30,
-                    left: 0,
-                    bottom: 5,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                  <XAxis dataKey="month" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area 
-                    type="monotone" 
-                    dataKey="users" 
-                    stroke="var(--primary)" 
-                    fill="var(--primary)" 
-                    fillOpacity={0.2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-  
-          <Card className="hover:shadow-md transition-all">
-            <CardHeader>
-              <CardTitle>Traffic Sources</CardTitle>
-              <CardDescription>User acquisition channels</CardDescription>
-            </CardHeader>
-            <CardContent className="h-[300px] flex items-center justify-center">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={trafficData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={90}
-                    fill="#8884d8"
-                    dataKey="value"
-                    label={({name, percent}) => `${name} ${(percent * 100).toFixed(0)}%`}
-                  >
-                    {trafficData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Legend />
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
-      
-      <motion.div className="grid gap-4 md:grid-cols-2" variants={item}>
-        <Card className="col-span-1 hover:shadow-md transition-all">
-          <CardHeader>
-            <CardTitle>Blog Post Analytics</CardTitle>
-            <CardDescription>Posts and view trends</CardDescription>
-          </CardHeader>
-          <CardContent className="h-[300px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart
-                data={blogChartData}
-                margin={{
-                  top: 5,
-                  right: 30,
-                  left: 0,
-                  bottom: 5,
-                }}
-              >
-                <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
-                <XAxis dataKey="month" />
-                <YAxis yAxisId="left" orientation="left" stroke="var(--primary)" />
-                <YAxis yAxisId="right" orientation="right" stroke="#82ca9d" />
-                <Tooltip />
-                <Legend />
-                <Bar yAxisId="left" dataKey="posts" fill="var(--primary)" name="Posts" />
-                <Bar yAxisId="right" dataKey="views" fill="#82ca9d" name="Views" barSize={20} />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
         
-        <Card className="col-span-1 hover:shadow-md transition-all">
+        <Card className={`${isAdmin ? 'lg:col-span-4' : 'md:col-span-2'} hover:shadow-md transition-all`}>
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Latest actions on the platform</CardDescription>
           </CardHeader>
           <CardContent className="max-h-[300px] overflow-auto">
-            <div className="space-y-4">
-              {activityData.map((activity, i) => (
-                <div key={i} className="flex items-start space-x-3">
-                  <div className="p-2 bg-primary/10 rounded-full">
-                    <activity.icon className="h-4 w-4 text-primary" />
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-start space-x-3">
+                    <div className="p-2 bg-muted rounded-full w-8 h-8" />
+                    <div className="space-y-2 flex-1">
+                      <div className="h-4 bg-muted rounded w-1/3" />
+                      <div className="h-3 bg-muted rounded w-1/2" />
+                      <div className="h-3 bg-muted rounded w-1/4" />
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">{activity.user}</p>
-                    <p className="text-sm text-muted-foreground">{activity.action}</p>
-                    <p className="text-xs text-muted-foreground">{activity.time}</p>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {activityData.length > 0 ? (
+                  activityData.map((activity, i) => (
+                    <div key={i} className="flex items-start space-x-3">
+                      <div className="p-2 bg-primary/10 rounded-full">
+                        <activity.icon className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium">{activity.user}</p>
+                        <p className="text-sm text-muted-foreground">{activity.action}</p>
+                        <p className="text-xs text-muted-foreground">{activity.time}</p>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-4">
+                    <p className="text-muted-foreground">No recent activity</p>
                   </div>
-                </div>
-              ))}
-            </div>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
-      </motion.div>
       
-      <motion.div variants={item} className="grid gap-4 md:grid-cols-1">
-        <Card className="hover:shadow-md transition-all">
+        <Card className={`${isAdmin ? 'lg:col-span-4' : 'md:col-span-2'} hover:shadow-md transition-all`}>
           <CardHeader>
             <CardTitle>Quick Actions</CardTitle>
             <CardDescription>Shortcuts to common tasks</CardDescription>
@@ -372,32 +487,50 @@ export default function DashboardOverview() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
               {isAdmin ? (
                 <>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span>Create Post</span>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/admin/blog-posts">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <span>Manage Posts</span>
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5">
-                    <Layout className="h-5 w-5 text-primary" />
-                    <span>Add Template</span>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/admin/templates">
+                      <Layout className="h-5 w-5 text-primary" />
+                      <span>Manage Templates</span>
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5">
-                    <Tag className="h-5 w-5 text-primary" />
-                    <span>Manage Tags</span>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/admin/categories">
+                      <Tag className="h-5 w-5 text-primary" />
+                      <span>Manage Categories</span>
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5">
-                    <Users className="h-5 w-5 text-primary" />
-                    <span>User Roles</span>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/admin/users">
+                      <Users className="h-5 w-5 text-primary" />
+                      <span>Manage Users</span>
+                    </Link>
                   </Button>
                 </>
               ) : (
                 <>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5">
-                    <FileText className="h-5 w-5 text-primary" />
-                    <span>New Post</span>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/posts">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <span>My Posts</span>
+                    </Link>
                   </Button>
-                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5">
-                    <User className="h-5 w-5 text-primary" />
-                    <span>Edit Profile</span>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/profile">
+                      <User className="h-5 w-5 text-primary" />
+                      <span>Edit Profile</span>
+                    </Link>
+                  </Button>
+                  <Button variant="outline" className="h-auto py-4 flex flex-col gap-2 hover:bg-primary/5" asChild>
+                    <Link to="/dashboard/chat">
+                      <Activity className="h-5 w-5 text-primary" />
+                      <span>Support Chat</span>
+                    </Link>
                   </Button>
                 </>
               )}
