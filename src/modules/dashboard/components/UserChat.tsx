@@ -8,7 +8,7 @@ import { Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ChatMessage } from "@/modules/templates/types";
+import { ChatMessage, typedRpc } from "@/types/supabase-custom";
 import { motion } from "framer-motion";
 
 export default function UserChat() {
@@ -27,21 +27,27 @@ export default function UserChat() {
       setLoading(true);
       try {
         // Use an RPC to get messages
-        const { data, error } = await supabase
-          .rpc('get_user_messages', { user_id_param: user.id });
+        const { data, error } = await typedRpc(
+          supabase, 
+          'get_user_messages', 
+          { user_id_param: user.id }
+        );
 
         if (error) throw error;
 
-        setMessages(data as ChatMessage[]);
+        setMessages(data || []);
         
         // Mark messages as read
         const unreadMessageIds = data
-          .filter((msg: ChatMessage) => !msg.is_read && msg.admin_id)
-          .map((msg: ChatMessage) => msg.id);
+          ?.filter((msg: ChatMessage) => !msg.is_read && msg.admin_id)
+          .map((msg: ChatMessage) => msg.id) || [];
           
         if (unreadMessageIds.length > 0) {
-          await supabase
-            .rpc('mark_user_messages_as_read', { message_ids: unreadMessageIds });
+          await typedRpc(
+            supabase,
+            'mark_user_messages_as_read', 
+            { message_ids: unreadMessageIds }
+          );
         }
       } catch (error: any) {
         console.error("Error fetching messages:", error.message);
@@ -69,9 +75,11 @@ export default function UserChat() {
           
           // Mark the message as read
           if (payload.new && payload.new.id) {
-            supabase
-              .rpc('mark_user_messages_as_read', { message_ids: [payload.new.id] })
-              .then();
+            typedRpc(
+              supabase,
+              'mark_user_messages_as_read', 
+              { message_ids: [payload.new.id] }
+            ).then();
           }
         }
       )
@@ -94,11 +102,14 @@ export default function UserChat() {
     
     try {
       // Use an RPC to send message
-      const { data, error } = await supabase
-        .rpc('send_user_message', {
+      const { data, error } = await typedRpc(
+        supabase,
+        'send_user_message', 
+        {
           message_text: message.trim(),
           from_user_id: user.id
-        });
+        }
+      );
         
       if (error) throw error;
       
@@ -108,7 +119,9 @@ export default function UserChat() {
         user_id: user.id,
         message: message.trim(),
         is_read: false,
-        created_at: new Date().toISOString()
+        created_at: new Date().toISOString(),
+        admin_id: null,
+        updated_at: new Date().toISOString()
       };
 
       setMessages([...messages, optimisticMessage]);

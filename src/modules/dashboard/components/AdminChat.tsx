@@ -10,7 +10,7 @@ import { Send, User } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { ChatMessage } from "@/modules/templates/types";
+import { ChatMessage, typedRpc } from "@/types/supabase-custom";
 import { motion } from "framer-motion";
 import { Profile } from "@/types/supabase-custom";
 
@@ -20,7 +20,7 @@ interface UserWithMessages {
   full_name?: string;
   avatar_url?: string;
   username?: string;
-  unreadCount: number;
+  unread_count: number;
   lastMessage: string;
   lastActivity: string;
 }
@@ -41,22 +41,23 @@ export default function AdminChat() {
       setLoading(true);
       try {
         // Get users with messages using an RPC
-        const { data, error } = await supabase
-          .rpc('get_users_with_messages');
+        const { data, error } = await typedRpc(supabase, 'get_users_with_messages');
 
         if (error) throw error;
         
         if (Array.isArray(data) && data.length > 0) {
           // Filter out the admin's own ID and format data
-          const usersWithData = data.filter((user: any) => user.id !== user?.id).map((u: any) => ({
-            id: u.id,
-            full_name: u.full_name || u.username || 'User',
-            avatar_url: u.avatar_url,
-            username: u.username,
-            unreadCount: u.unread_count || 0,
-            lastMessage: u.last_message || "",
-            lastActivity: u.last_activity || new Date().toISOString()
-          }));
+          const usersWithData = data
+            ?.filter((u: any) => u.id !== user?.id)
+            .map((u: any) => ({
+              id: u.id,
+              full_name: u.full_name || u.username || 'User',
+              avatar_url: u.avatar_url,
+              username: u.username,
+              unreadCount: u.unread_count || 0,
+              lastMessage: u.last_message || "",
+              lastActivity: u.last_activity || new Date().toISOString()
+            })) || [];
           
           setUsers(usersWithData);
           
@@ -102,22 +103,31 @@ export default function AdminChat() {
       
       try {
         // Use an RPC to get messages for this user and admin
-        const { data, error } = await supabase
-          .rpc('get_chat_messages_with_user', { user_id_param: activeChat });
+        const { data, error } = await typedRpc(
+          supabase,
+          'get_chat_messages_with_user', 
+          { user_id_param: activeChat }
+        );
 
         if (error) throw error;
 
         if (Array.isArray(data)) {
-          setMessages(data as ChatMessage[]);
+          setMessages(data);
           
           // Mark messages as read
           const unreadMessageIds = data
-            .filter(msg => !msg.is_read && msg.user_id === activeChat && !msg.admin_id)
-            .map(msg => msg.id);
+            ?.filter(msg => !msg.is_read && msg.user_id === activeChat && !msg.admin_id)
+            .map(msg => msg.id) || [];
             
           if (unreadMessageIds.length > 0) {
-            await supabase
-              .rpc('mark_messages_as_read', { message_ids: unreadMessageIds, admin_id_param: user?.id });
+            await typedRpc(
+              supabase,
+              'mark_messages_as_read', 
+              { 
+                message_ids: unreadMessageIds, 
+                admin_id_param: user?.id || '' 
+              }
+            );
           }
         }
         
@@ -145,12 +155,14 @@ export default function AdminChat() {
             
             // Mark message as read
             if (payload.new && payload.new.id) {
-              supabase
-                .rpc('mark_messages_as_read', { 
+              typedRpc(
+                supabase,
+                'mark_messages_as_read', 
+                { 
                   message_ids: [payload.new.id], 
-                  admin_id_param: user?.id 
-                })
-                .then();
+                  admin_id_param: user?.id || '' 
+                }
+              ).then();
             }
           }
         )
@@ -174,12 +186,15 @@ export default function AdminChat() {
     
     try {
       // Use an RPC to send a message
-      const { data, error } = await supabase
-        .rpc('send_admin_message', {
+      const { data, error } = await typedRpc(
+        supabase,
+        'send_admin_message',
+        {
           to_user_id: activeChat,
           message_text: message.trim(),
           from_admin_id: user.id
-        });
+        }
+      );
         
       if (error) throw error;
       
@@ -191,11 +206,7 @@ export default function AdminChat() {
         message: message.trim(),
         created_at: new Date().toISOString(),
         is_read: false,
-        user: {
-          full_name: '',
-          avatar_url: '',
-          username: ''
-        }
+        updated_at: new Date().toISOString()
       };
 
       setMessages([...messages, optimisticMessage]);

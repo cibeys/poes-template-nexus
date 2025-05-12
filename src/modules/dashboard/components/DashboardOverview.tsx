@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FileText, Layout, Users, Eye, Tag, User, ArrowUp, ArrowDown, Activity } from "lucide-react";
@@ -12,6 +11,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell 
 } from "recharts";
 import { useToast } from "@/hooks/use-toast";
+import { typedRpc } from "@/types/supabase-custom";
 
 export default function DashboardOverview() {
   const { user, isAdmin } = useAuth();
@@ -75,15 +75,25 @@ export default function DashboardOverview() {
         };
         
         // Get unread messages
-        const unreadMessagesQuery = isAdmin
-          ? await supabase.from("chat_messages").select("*", { count: "exact" }).is("admin_id", null)
-          : await supabase.from("chat_messages").select("*", { count: "exact" })
-              .eq("user_id", user?.id)
-              .is("admin_id", 'not.null')
-              .eq("is_read", false);
-              
-        if (unreadMessagesQuery.error) throw unreadMessagesQuery.error;
-        stats.unreadMessages = unreadMessagesQuery.count || 0;
+        try {
+          if (isAdmin) {
+            const { data: unreadCount, error } = await typedRpc(supabase, 'count_unread_admin_messages');
+            if (!error && unreadCount !== null) {
+              stats.unreadMessages = unreadCount;
+            }
+          } else {
+            const { data: unreadCount, error } = await typedRpc(
+              supabase, 
+              'count_unread_user_messages',
+              { user_id: user?.id || '' }
+            );
+            if (!error && unreadCount !== null) {
+              stats.unreadMessages = unreadCount;
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching unread messages:", err);
+        }
         
         if (isAdmin) {
           // Get templates count

@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { 
@@ -20,6 +21,7 @@ import ThemeCustomizer from "@/modules/dashboard/components/ThemeCustomizer";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { ChatMessageTable } from "@/modules/templates/types";
+import { typedRpc } from "@/types/supabase-custom";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -41,15 +43,17 @@ const DashboardLayoutContent = ({ children }: DashboardLayoutProps) => {
       try {
         if (isAdmin) {
           // For admin, count all unread messages from users
-          const { data, error } = await supabase
-            .rpc('count_unread_admin_messages');
+          const { data, error } = await typedRpc(supabase, 'count_unread_admin_messages');
             
           if (error) throw error;
           setUnreadCount(data || 0);
         } else {
           // For regular users, count unread messages from admins
-          const { data, error } = await supabase
-            .rpc('count_unread_user_messages', { user_id: user.id });
+          const { data, error } = await typedRpc(
+            supabase, 
+            'count_unread_user_messages', 
+            { user_id: user.id }
+          );
             
           if (error) throw error;
           setUnreadCount(data || 0);
