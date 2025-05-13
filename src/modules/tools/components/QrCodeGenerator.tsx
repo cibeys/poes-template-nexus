@@ -1,3 +1,4 @@
+
 import { useState, useRef } from "react";
 import { QRCodeSVG } from "qrcode.react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,7 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
-import { Check, FileText, Link as LinkIcon, Mail, MapPin, Phone } from "lucide-react";
+import { Check, FileText, Link as LinkIcon, Mail, MapPin, Phone, QrCode, Download } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 type QrType = 'url' | 'text' | 'email' | 'phone' | 'location';
