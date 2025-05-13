@@ -16,7 +16,7 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     detectSessionInUrl: true
   },
   global: {
-    fetch: (...args) => {
+    fetch: (...args: Parameters<typeof fetch>) => {
       // Add custom error handling for Supabase requests
       return fetch(...args).then(async (response) => {
         if (!response.ok) {

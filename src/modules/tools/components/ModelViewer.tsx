@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Cube, Upload, Download, Share2, Loader2 } from "lucide-react";
+import { Box, Upload, Download, Share2, Loader2 } from "lucide-react";
 
 export default function ModelViewer() {
   const [loading, setLoading] = useState(false);
@@ -20,7 +20,7 @@ export default function ModelViewer() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Cube className="h-5 w-5 text-primary" />
+            <Box className="h-5 w-5 text-primary" />
             Model Viewer
           </CardTitle>
           <CardDescription>
@@ -30,17 +30,17 @@ export default function ModelViewer() {
         <CardContent className="flex flex-col items-center justify-center p-6 min-h-[400px]">
           <div className="text-center space-y-4">
             <div className="bg-muted p-8 rounded-lg flex items-center justify-center">
-              <Cube size={64} className="text-muted-foreground" />
+              <Box size={64} className="text-muted-foreground" />
             </div>
             <p>
               To enable 3D model viewing, please install these packages:
             </p>
             <div className="bg-muted p-4 rounded-md text-left">
               <pre className="text-sm">
-                npm install @react-three/fiber @react-three/drei drei
+                npm install @react-three/fiber @react-three/drei three
               </pre>
               <p className="text-xs text-muted-foreground mt-2">
-                Or run this Lovable command: &lt;lov-add-dependency&gt;@react-three/fiber@latest @react-three/drei@latest&lt;/lov-add-dependency&gt;
+                Or run this Lovable command: &lt;lov-add-dependency&gt;@react-three/fiber@^8.18.0 @react-three/drei@^9.122.0 three@latest&lt;/lov-add-dependency&gt;
               </p>
             </div>
             <Button disabled>
