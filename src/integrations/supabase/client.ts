@@ -9,4 +9,24 @@ const SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiO
 // Import the supabase client like this:
 // import { supabase } from "@/integrations/supabase/client";
 
-export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY);
+export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true
+  },
+  global: {
+    fetch: (...args) => {
+      // Add custom error handling for Supabase requests
+      return fetch(...args).then(async (response) => {
+        if (!response.ok) {
+          console.error(`Supabase request failed: ${response.status} ${response.statusText}`);
+        }
+        return response;
+      }).catch(error => {
+        console.error("Supabase fetch error:", error);
+        throw error;
+      });
+    }
+  }
+});

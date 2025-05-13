@@ -124,6 +124,36 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          admin_id: string | null
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          message: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          admin_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          admin_id?: string | null
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          message?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       post_categories: {
         Row: {
           category_id: string
@@ -374,6 +404,50 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      count_unread_admin_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      count_unread_user_messages: {
+        Args: { user_id: string }
+        Returns: number
+      }
+      get_chat_messages_with_user: {
+        Args: { user_id_param: string }
+        Returns: {
+          id: string
+          user_id: string
+          admin_id: string
+          message: string
+          is_read: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_user_messages: {
+        Args: { user_id_param: string }
+        Returns: {
+          id: string
+          user_id: string
+          admin_id: string
+          message: string
+          is_read: boolean
+          created_at: string
+          updated_at: string
+        }[]
+      }
+      get_users_with_messages: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          id: string
+          full_name: string
+          username: string
+          avatar_url: string
+          unread_count: number
+          last_message: string
+          last_activity: string
+        }[]
+      }
       increment_blog_view: {
         Args: { post_id: string; session: string }
         Returns: undefined
@@ -381,6 +455,26 @@ export type Database = {
       increment_template_download: {
         Args: { temp_id: string }
         Returns: undefined
+      }
+      mark_messages_as_read: {
+        Args: { message_ids: string[]; admin_id_param: string }
+        Returns: undefined
+      }
+      mark_user_messages_as_read: {
+        Args: { message_ids: string[] }
+        Returns: undefined
+      }
+      send_admin_message: {
+        Args: {
+          to_user_id: string
+          message_text: string
+          from_admin_id: string
+        }
+        Returns: string
+      }
+      send_user_message: {
+        Args: { message_text: string; from_user_id: string }
+        Returns: string
       }
     }
     Enums: {

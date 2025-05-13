@@ -6,6 +6,7 @@ declare namespace google {
       setCenter(latLng: LatLng | LatLngLiteral): void;
       setZoom(zoom: number): void;
       getCenter(): LatLng;
+      setMapTypeId(mapTypeId: string): void;
     }
 
     class Marker {
@@ -13,45 +14,51 @@ declare namespace google {
       setMap(map: Map | null): void;
       setPosition(latLng: LatLng | LatLngLiteral): void;
       getPosition(): LatLng;
+      setTitle(title: string): void;
       addListener(eventName: string, handler: Function): MapsEventListener;
       setAnimation(animation: any): void;
     }
 
     class InfoWindow {
       constructor(opts?: InfoWindowOptions);
-      open(map?: Map, anchor?: MVCObject): void;
-      close(): void;
+      open(map?: Map, anchor?: MVCObject | Marker): void;
       setContent(content: string | Node): void;
+      close(): void;
     }
 
     class Geocoder {
-      constructor();
       geocode(request: GeocoderRequest, callback: (results: GeocoderResult[], status: GeocoderStatus) => void): void;
     }
 
-    class LatLng {
-      constructor(lat: number, lng: number, noWrap?: boolean);
-      lat(): number;
-      lng(): number;
-      equals(other: LatLng): boolean;
-      toString(): string;
+    interface MapOptions {
+      center?: LatLng | LatLngLiteral;
+      zoom?: number;
+      mapTypeId?: string;
+      mapTypeControl?: boolean;
+      fullscreenControl?: boolean;
+      streetViewControl?: boolean;
+      [key: string]: any;
+    }
+
+    interface MarkerOptions {
+      position?: LatLng | LatLngLiteral;
+      map?: Map | null;
+      title?: string;
+      animation?: any;
+      [key: string]: any;
+    }
+
+    interface InfoWindowOptions {
+      content?: string | Node;
+      position?: LatLng | LatLngLiteral;
+      [key: string]: any;
     }
 
     interface GeocoderRequest {
       address?: string;
       location?: LatLng | LatLngLiteral;
       placeId?: string;
-      bounds?: LatLngBounds | LatLngBoundsLiteral;
-      componentRestrictions?: GeocoderComponentRestrictions;
-      region?: string;
-    }
-
-    interface GeocoderComponentRestrictions {
-      administrativeArea?: string;
-      country?: string | string[];
-      locality?: string;
-      postalCode?: string;
-      route?: string;
+      [key: string]: any;
     }
 
     interface GeocoderResult {
@@ -59,7 +66,7 @@ declare namespace google {
       formatted_address: string;
       geometry: GeocoderGeometry;
       place_id: string;
-      types: string[];
+      [key: string]: any;
     }
 
     interface GeocoderAddressComponent {
@@ -70,38 +77,9 @@ declare namespace google {
 
     interface GeocoderGeometry {
       location: LatLng;
-      location_type: GeocoderLocationType;
+      location_type: string;
       viewport: LatLngBounds;
-      bounds?: LatLngBounds;
-    }
-
-    type GeocoderLocationType = "APPROXIMATE" | "GEOMETRIC_CENTER" | "RANGE_INTERPOLATED" | "ROOFTOP";
-    type GeocoderStatus = "OK" | "ZERO_RESULTS" | "OVER_QUERY_LIMIT" | "REQUEST_DENIED" | "INVALID_REQUEST" | "UNKNOWN_ERROR";
-
-    interface MapOptions {
-      center?: LatLng | LatLngLiteral;
-      zoom?: number;
-      mapTypeControl?: boolean;
-      fullscreenControl?: boolean;
-      streetViewControl?: boolean;
-    }
-
-    interface MarkerOptions {
-      position: LatLng | LatLngLiteral;
-      map?: Map;
-      title?: string;
-      animation?: any;
-    }
-
-    interface InfoWindowOptions {
-      content?: string | Node;
-      position?: LatLng | LatLngLiteral;
-      maxWidth?: number;
-    }
-
-    interface LatLngLiteral {
-      lat: number;
-      lng: number;
+      [key: string]: any;
     }
 
     interface LatLngBounds {
@@ -111,6 +89,7 @@ declare namespace google {
       getCenter(): LatLng;
       getNorthEast(): LatLng;
       getSouthWest(): LatLng;
+      intersects(other: LatLngBounds | LatLngBoundsLiteral): boolean;
       isEmpty(): boolean;
       toJSON(): LatLngBoundsLiteral;
       toSpan(): LatLng;
@@ -125,19 +104,31 @@ declare namespace google {
       west: number;
     }
 
-    const Animation: {
-      BOUNCE: number;
-      DROP: number;
-      NONE: number;
-    };
+    interface LatLng {
+      lat(): number;
+      lng(): number;
+      toJSON(): LatLngLiteral;
+      toString(): string;
+    }
 
-    interface MVCObject {
-      addListener(eventName: string, handler: Function): MapsEventListener;
+    interface LatLngLiteral {
+      lat: number;
+      lng: number;
     }
 
     interface MapsEventListener {
       remove(): void;
     }
+
+    class MVCObject {
+    }
+
+    type GeocoderStatus = 'OK' | 'ZERO_RESULTS' | 'OVER_QUERY_LIMIT' | 'REQUEST_DENIED' | 'INVALID_REQUEST' | 'UNKNOWN_ERROR';
+
+    const Animation: {
+      BOUNCE: number;
+      DROP: number;
+      [key: string]: number;
+    };
   }
 }
-

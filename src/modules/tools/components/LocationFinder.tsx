@@ -13,54 +13,41 @@ export default function LocationFinder() {
   const [mapLoaded, setMapLoaded] = useState(false);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
-  const googleScriptRef = useRef<HTMLScriptElement | null>(null);
+  const scriptRef = useRef<HTMLScriptElement | null>(null);
   const { toast } = useToast();
 
-  // Initialize Google Maps
+  // Initialize Google Maps with better cleanup and error handling
   useEffect(() => {
-    // Check if script is already loaded
-    const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
-    if (existingScript) {
-      // If script already exists, don't add another one
-      initMap();
-      return;
-    }
-
-    // Function to load Google Maps API
-    const loadGoogleMapsAPI = () => {
-      const googleMapsScript = document.createElement('script');
-      googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBXDe0zEDI8JMV0NZYNOsWZzYZ-Yuetiy4&libraries=places&loading=async`;
-      googleMapsScript.async = true;
-      googleMapsScript.defer = true;
-      googleMapsScript.onload = initMap;
-      document.head.appendChild(googleMapsScript);
-      googleScriptRef.current = googleMapsScript;
-    };
-
-    // Initialize map
-    function initMap() {
-      if (mapRef.current && !mapInstanceRef.current && window.google && window.google.maps) {
-        // Default to a central location
-        const defaultLocation = { lat: 40.7128, lng: -74.006 };
-        
-        mapInstanceRef.current = new google.maps.Map(mapRef.current, {
-          center: defaultLocation,
-          zoom: 12,
-          mapTypeControl: false,
-          fullscreenControl: false,
-          streetViewControl: false,
-        });
-        
-        // Try to get user's current location
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(
-            (position) => {
-              const userLocation = {
-                lat: position.coords.latitude,
-                lng: position.coords.longitude
-              };
-              
-              if (mapInstanceRef.current) {
+    let isMounted = true;
+    
+    // Function to initialize map after script is loaded
+    const initMap = () => {
+      if (!isMounted) return;
+      
+      try {
+        if (mapRef.current && !mapInstanceRef.current && window.google?.maps) {
+          // Default to a central location
+          const defaultLocation = { lat: 40.7128, lng: -74.006 };
+          
+          mapInstanceRef.current = new google.maps.Map(mapRef.current, {
+            center: defaultLocation,
+            zoom: 12,
+            mapTypeControl: false,
+            fullscreenControl: false,
+            streetViewControl: false,
+          });
+          
+          // Try to get user's current location
+          if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+              (position) => {
+                if (!isMounted || !mapInstanceRef.current) return;
+                
+                const userLocation = {
+                  lat: position.coords.latitude,
+                  lng: position.coords.longitude
+                };
+                
                 mapInstanceRef.current.setCenter(userLocation);
                 
                 // Add marker for user's location
@@ -77,49 +64,124 @@ export default function LocationFinder() {
                 });
                 
                 // Open info window on click
-                markerRef.current.addListener("click", () => {
-                  if (mapInstanceRef.current && markerRef.current) {
-                    infowindow.open(mapInstanceRef.current, markerRef.current);
-                  }
-                });
+                if (markerRef.current) {
+                  markerRef.current.addListener("click", () => {
+                    if (mapInstanceRef.current && markerRef.current) {
+                      infowindow.open(mapInstanceRef.current, markerRef.current);
+                    }
+                  });
+                }
+              },
+              (error) => {
+                console.error("Error getting location:", error);
+                if (isMounted) {
+                  toast({
+                    title: "Location Error",
+                    description: "Unable to get your location. Using default view.",
+                    variant: "destructive"
+                  });
+                }
               }
-            },
-            (error) => {
-              console.error("Error getting location:", error);
-              toast({
-                title: "Location Error",
-                description: "Unable to get your location. Using default view.",
-                variant: "destructive"
-              });
-            }
-          );
+            );
+          }
+          
+          if (isMounted) {
+            setMapLoaded(true);
+          }
+        }
+      } catch (error) {
+        console.error("Error initializing map:", error);
+        if (isMounted) {
+          toast({
+            title: "Map Error",
+            description: "Failed to initialize Google Maps.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    // Function to load Google Maps API
+    const loadGoogleMapsAPI = () => {
+      try {
+        // Check for existing script to avoid duplicates
+        const existingScript = document.querySelector('script[src*="maps.googleapis.com/maps/api/js"]');
+        if (existingScript) {
+          // If script already exists, check if API is loaded and initialize
+          if (window.google?.maps) {
+            initMap();
+          } else {
+            // Wait for existing script to load
+            existingScript.addEventListener('load', initMap);
+          }
+          return;
         }
         
-        setMapLoaded(true);
-      } else if (!window.google || !window.google.maps) {
-        // If Google Maps is not loaded yet, try again
-        loadGoogleMapsAPI();
+        // Create new script element if none exists
+        const googleMapsScript = document.createElement('script');
+        googleMapsScript.src = `https://maps.googleapis.com/maps/api/js?key=AIzaSyBXDe0zEDI8JMV0NZYNOsWZzYZ-Yuetiy4&libraries=places&loading=async&callback=__googleMapsCallback`;
+        googleMapsScript.async = true;
+        googleMapsScript.defer = true;
+        
+        // Define global callback
+        window.__googleMapsCallback = initMap;
+        
+        // Handle script load errors
+        googleMapsScript.onerror = () => {
+          if (isMounted) {
+            toast({
+              title: "Map Error",
+              description: "Failed to load Google Maps. Please check your internet connection.",
+              variant: "destructive"
+            });
+          }
+        };
+        
+        document.head.appendChild(googleMapsScript);
+        scriptRef.current = googleMapsScript;
+      } catch (error) {
+        console.error("Error loading Google Maps API:", error);
+        if (isMounted) {
+          toast({
+            title: "Map Error",
+            description: "Failed to load Google Maps API.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+    
+    // Declare the global callback type
+    declare global {
+      interface Window {
+        __googleMapsCallback?: () => void;
       }
     }
 
-    // First try to initialize if Google Maps is already loaded
-    if (window.google && window.google.maps) {
-      initMap();
-    } else {
-      loadGoogleMapsAPI();
-    }
+    // Start loading the API
+    loadGoogleMapsAPI();
     
+    // Cleanup function
     return () => {
-      // Clean up
+      isMounted = false;
+      
+      // Clean up map marker
       if (markerRef.current) {
         markerRef.current.setMap(null);
         markerRef.current = null;
       }
+      
+      // Clean up map instance
       mapInstanceRef.current = null;
+      
+      // Clean up global callback
+      if (window.__googleMapsCallback) {
+        delete window.__googleMapsCallback;
+      }
     };
   }, [toast]);
 
-  // Search location
+  // Search location with better error handling
   const searchLocation = (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -134,59 +196,75 @@ export default function LocationFinder() {
 
     setLoading(true);
     
-    if (mapLoaded && mapInstanceRef.current && window.google && window.google.maps) {
-      const geocoder = new google.maps.Geocoder();
-      
-      geocoder.geocode({ address: search }, (results, status) => {
-        if (status === "OK" && results && results[0]) {
-          const location = results[0].geometry.location;
-          
-          // Center map on the found location
-          mapInstanceRef.current?.setCenter(location);
-          mapInstanceRef.current?.setZoom(14);
-          
-          // Clear existing marker if any
-          if (markerRef.current) {
-            markerRef.current.setMap(null);
+    if (mapLoaded && mapInstanceRef.current && window.google?.maps) {
+      try {
+        const geocoder = new google.maps.Geocoder();
+        
+        geocoder.geocode({ address: search }, (results, status) => {
+          if (status === "OK" && results && results[0]) {
+            const location = results[0].geometry.location;
+            
+            // Center map on the found location
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.setCenter(location);
+              mapInstanceRef.current.setZoom(14);
+            }
+            
+            // Clear existing marker if any
+            if (markerRef.current) {
+              markerRef.current.setMap(null);
+            }
+            
+            // Create new marker
+            if (mapInstanceRef.current) {
+              markerRef.current = new google.maps.Marker({
+                map: mapInstanceRef.current,
+                position: location,
+                animation: google.maps.Animation.DROP,
+                title: results[0].formatted_address
+              });
+              
+              // Create info window with address details
+              const infowindow = new google.maps.InfoWindow({
+                content: `<strong>${results[0].formatted_address}</strong>`
+              });
+              
+              // Open info window on click
+              if (markerRef.current) {
+                markerRef.current.addListener("click", () => {
+                  if (mapInstanceRef.current && markerRef.current) {
+                    infowindow.open(mapInstanceRef.current, markerRef.current);
+                  }
+                });
+                
+                // Open info window initially
+                infowindow.open(mapInstanceRef.current, markerRef.current);
+              }
+            }
+            
+            toast({
+              title: "Location Found",
+              description: `Found: ${results[0].formatted_address}`,
+            });
+          } else {
+            toast({
+              title: "Search Error",
+              description: "Location not found. Please try again with a different search term.",
+              variant: "destructive"
+            });
           }
           
-          // Create new marker
-          markerRef.current = new google.maps.Marker({
-            map: mapInstanceRef.current,
-            position: location,
-            animation: google.maps.Animation.DROP,
-            title: results[0].formatted_address
-          });
-          
-          // Create info window with address details
-          const infowindow = new google.maps.InfoWindow({
-            content: `<strong>${results[0].formatted_address}</strong>`
-          });
-          
-          // Open info window on click
-          markerRef.current.addListener("click", () => {
-            if (mapInstanceRef.current && markerRef.current) {
-              infowindow.open(mapInstanceRef.current, markerRef.current);
-            }
-          });
-          
-          // Open info window initially
-          infowindow.open(mapInstanceRef.current, markerRef.current);
-          
-          toast({
-            title: "Location Found",
-            description: `Found: ${results[0].formatted_address}`,
-          });
-        } else {
-          toast({
-            title: "Search Error",
-            description: "Location not found. Please try again with a different search term.",
-            variant: "destructive"
-          });
-        }
-        
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("Geocoding error:", error);
+        toast({
+          title: "Search Error",
+          description: "An error occurred while searching for the location.",
+          variant: "destructive"
+        });
         setLoading(false);
-      });
+      }
     } else {
       toast({
         title: "Map Error",
@@ -197,7 +275,7 @@ export default function LocationFinder() {
     }
   };
 
-  // Get current location
+  // Get current location with better error handling
   const getCurrentLocation = () => {
     if (!mapLoaded) {
       toast({
@@ -213,42 +291,53 @@ export default function LocationFinder() {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
-          const userLocation = {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          };
-          
-          if (mapInstanceRef.current && window.google && window.google.maps) {
-            mapInstanceRef.current.setCenter(userLocation);
-            mapInstanceRef.current.setZoom(14);
+          try {
+            const userLocation = {
+              lat: position.coords.latitude,
+              lng: position.coords.longitude
+            };
             
-            // Clear existing marker if any
-            if (markerRef.current) {
-              markerRef.current.setMap(null);
-            }
-            
-            // Create new marker
-            markerRef.current = new google.maps.Marker({
-              position: userLocation,
-              map: mapInstanceRef.current,
-              title: "Your Location",
-              animation: google.maps.Animation.DROP,
-            });
-            
-            // Create info window
-            const infowindow = new google.maps.InfoWindow({
-              content: "<strong>Your Current Location</strong>"
-            });
-            
-            // Open info window
-            infowindow.open(mapInstanceRef.current, markerRef.current);
-          
-            // Reverse geocode to get address
-            const geocoder = new google.maps.Geocoder();
-            geocoder.geocode({ location: userLocation }, (results, status) => {
-              if (status === "OK" && results && results[0]) {
-                setSearch(results[0].formatted_address);
+            if (mapInstanceRef.current && window.google?.maps) {
+              mapInstanceRef.current.setCenter(userLocation);
+              mapInstanceRef.current.setZoom(14);
+              
+              // Clear existing marker if any
+              if (markerRef.current) {
+                markerRef.current.setMap(null);
               }
+              
+              // Create new marker
+              markerRef.current = new google.maps.Marker({
+                position: userLocation,
+                map: mapInstanceRef.current,
+                title: "Your Location",
+                animation: google.maps.Animation.DROP,
+              });
+              
+              // Create info window
+              const infowindow = new google.maps.InfoWindow({
+                content: "<strong>Your Current Location</strong>"
+              });
+              
+              // Open info window
+              if (markerRef.current) {
+                infowindow.open(mapInstanceRef.current, markerRef.current);
+              
+                // Reverse geocode to get address
+                const geocoder = new google.maps.Geocoder();
+                geocoder.geocode({ location: userLocation }, (results, status) => {
+                  if (status === "OK" && results && results[0]) {
+                    setSearch(results[0].formatted_address);
+                  }
+                });
+              }
+            }
+          } catch (error) {
+            console.error("Error updating map with location:", error);
+            toast({
+              title: "Map Error",
+              description: "Failed to update the map with your location.",
+              variant: "destructive"
             });
           }
           

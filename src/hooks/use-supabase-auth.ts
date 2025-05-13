@@ -9,22 +9,32 @@ export function useSupabaseAuth() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check active sessions and set the user
     const getSession = async () => {
-      setLoading(true);
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user || null);
-      setLoading(false);
-
-      // Listen for auth changes
-      const { data: { subscription } } = supabase.auth.onAuthStateChange(
-        (_event, session) => {
-          setUser(session?.user || null);
-          setLoading(false);
+      try {
+        setLoading(true);
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error("Auth session error:", error.message);
         }
-      );
+        
+        setUser(session?.user || null);
+        setLoading(false);
 
-      return () => subscription.unsubscribe();
+        // Listen for auth changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (_event, session) => {
+            setUser(session?.user || null);
+            setLoading(false);
+          }
+        );
+
+        return () => subscription.unsubscribe();
+      } catch (error) {
+        console.error("Auth initialization error:", error);
+        setLoading(false);
+        return () => {};
+      }
     };
 
     getSession();
@@ -49,11 +59,11 @@ export function useSupabaseAuth() {
         description: "You have been signed in.",
       });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing in:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: error?.message || "An unexpected error occurred",
         variant: "destructive"
       });
       return false;
@@ -81,11 +91,11 @@ export function useSupabaseAuth() {
         description: "Check your email to confirm your account.",
       });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing up:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: error?.message || "An unexpected error occurred",
         variant: "destructive"
       });
       return false;
@@ -113,11 +123,11 @@ export function useSupabaseAuth() {
         description: "You have been signed out.",
       });
       return true;
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error signing out:", error);
       toast({
         title: "Error",
-        description: "An unexpected error occurred",
+        description: error?.message || "An unexpected error occurred",
         variant: "destructive"
       });
       return false;

@@ -60,11 +60,17 @@ export interface CustomRPCFunctions {
   }>;
 }
 
-// Create a custom typed rpc function
+// Create a custom typed rpc function with better error handling
 export const typedRpc = <T extends keyof CustomRPCFunctions>(
   supabase: any,
   fn: T,
   ...args: Parameters<CustomRPCFunctions[T]>
 ): ReturnType<CustomRPCFunctions[T]> => {
-  return supabase.rpc(fn, ...(args as any)) as any;
+  try {
+    return supabase.rpc(fn, ...(args as any)) as any;
+  } catch (error) {
+    console.error(`Error calling RPC function ${fn}:`, error);
+    // Return an object with error property to match the expected return type
+    return { error } as any;
+  }
 };
