@@ -90,6 +90,9 @@ export default function CrudTemplate() {
         if (error) throw error;
         
         if (data) {
+          // Convert the tech_stack array to a comma-separated string for the form
+          const techStackString = Array.isArray(data.tech_stack) ? data.tech_stack.join(", ") : "";
+          
           form.reset({
             title: data.title,
             description: data.description || "",
@@ -99,7 +102,7 @@ export default function CrudTemplate() {
             preview_url: data.preview_url || "",
             github_url: data.github_url || "",
             is_premium: data.is_premium || false,
-            tech_stack: data.tech_stack ? data.tech_stack.join(", ") : "",
+            tech_stack: techStackString,
           });
         }
       } catch (error) {
@@ -126,6 +129,11 @@ export default function CrudTemplate() {
     setLoading(true);
     
     try {
+      // Ensure tech_stack is an array before saving
+      const techStackArray = typeof data.tech_stack === 'string' 
+        ? data.tech_stack.split(',').map(item => item.trim())
+        : data.tech_stack;
+      
       if (id) {
         // Update existing template
         const { error } = await supabase
@@ -139,7 +147,7 @@ export default function CrudTemplate() {
             preview_url: data.preview_url || null,
             github_url: data.github_url || null,
             is_premium: data.is_premium,
-            tech_stack: Array.isArray(data.tech_stack) ? data.tech_stack : [],
+            tech_stack: techStackArray,
             updated_at: new Date().toISOString(),
           })
           .eq("id", id);
@@ -163,7 +171,7 @@ export default function CrudTemplate() {
             preview_url: data.preview_url || null,
             github_url: data.github_url || null,
             is_premium: data.is_premium,
-            tech_stack: Array.isArray(data.tech_stack) ? data.tech_stack : [],
+            tech_stack: techStackArray,
           });
           
         if (error) throw error;

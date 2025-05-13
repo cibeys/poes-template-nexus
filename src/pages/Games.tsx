@@ -5,7 +5,7 @@ import MainLayout from "@/common/components/layouts/MainLayout";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Snake, Gamepad, Blocks, Puzzle, Layout, ArrowLeft } from "lucide-react";
+import { Gamepad, Blocks, Puzzle, Layout, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 // Game components
@@ -20,7 +20,7 @@ const GAMES = [
   {
     id: "snake",
     title: "Snake Game",
-    icon: Snake,
+    icon: Gamepad,
     description: "Control the snake, eat food, and avoid hitting the walls or yourself.",
     component: SnakeGame,
   },
