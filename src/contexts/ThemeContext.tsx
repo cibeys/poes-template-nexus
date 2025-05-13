@@ -1,6 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useTheme } from '@/common/components/ThemeProvider';
+import { toast } from '@/hooks/use-toast';
 
 export type MenuType = 'static' | 'overlay' | 'slim' | 'slim+';
 export type PresetTheme = 'aura' | 'lara' | 'nora';
@@ -12,6 +13,10 @@ export interface ThemeSettings {
   menuType: MenuType;
   preset: PresetTheme;
   layoutTheme: 'colorScheme' | 'primaryColor';
+  fontFamily: string;
+  fontSize: number;
+  lineHeight: number;
+  borderRadius: number;
 }
 
 type ThemeContextType = {
@@ -31,6 +36,10 @@ const defaultThemeSettings: ThemeSettings = {
   menuType: 'static',
   preset: 'aura',
   layoutTheme: 'colorScheme',
+  fontFamily: 'font-sans',
+  fontSize: 16,
+  lineHeight: 1.5,
+  borderRadius: 0.5,
 };
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -56,8 +65,30 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
     }
     
     // Apply CSS variables for custom colors
-    document.documentElement.style.setProperty('--primary-color', themeSettings.primaryColor);
-    document.documentElement.style.setProperty('--surface-color', themeSettings.surfaceColor);
+    document.documentElement.style.setProperty('--primary-rgb', hexToRgb(themeSettings.primaryColor));
+    document.documentElement.style.setProperty('--surface-rgb', hexToRgb(themeSettings.surfaceColor));
+    
+    // Apply font family
+    if (themeSettings.fontFamily) {
+      document.documentElement.style.setProperty('--font-family', themeSettings.fontFamily);
+      document.body.className = document.body.className.replace(/font-\w+/g, '');
+      document.body.classList.add(themeSettings.fontFamily);
+    }
+    
+    // Apply font size
+    if (themeSettings.fontSize) {
+      document.documentElement.style.setProperty('--font-size-base', `${themeSettings.fontSize}px`);
+    }
+    
+    // Apply line height
+    if (themeSettings.lineHeight) {
+      document.documentElement.style.setProperty('--line-height-base', `${themeSettings.lineHeight}`);
+    }
+    
+    // Apply border radius
+    if (themeSettings.borderRadius !== undefined) {
+      document.documentElement.style.setProperty('--radius', `${themeSettings.borderRadius}rem`);
+    }
     
     // Apply preset class
     document.body.classList.remove('preset-aura', 'preset-lara', 'preset-nora');
@@ -68,6 +99,18 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
     document.body.classList.add(`menu-${themeSettings.menuType === 'slim+' ? 'slim-plus' : themeSettings.menuType}`);
     
   }, [themeSettings, setTheme]);
+
+  function hexToRgb(hex: string): string {
+    // Remove the # if it exists
+    hex = hex.replace('#', '');
+    
+    // Parse the hex values
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    
+    return `${r}, ${g}, ${b}`;
+  }
 
   const updateThemeSetting = <K extends keyof ThemeSettings>(
     key: K, 
@@ -81,12 +124,15 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
         if (value === 'aura') {
           newSettings.primaryColor = '#8B5CF6';
           newSettings.surfaceColor = '#f8fafc';
+          newSettings.fontFamily = 'font-sans';
         } else if (value === 'lara') {
           newSettings.primaryColor = '#3B82F6';
           newSettings.surfaceColor = '#ffffff';
+          newSettings.fontFamily = 'font-sans';
         } else if (value === 'nora') {
           newSettings.primaryColor = '#D946EF';
           newSettings.surfaceColor = '#121212';
+          newSettings.fontFamily = 'font-sans';
         }
       }
       
@@ -96,6 +142,10 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
 
   const resetThemeSettings = () => {
     setThemeSettings(defaultThemeSettings);
+    toast({
+      title: "Settings Reset",
+      description: "All theme settings have been reset to defaults",
+    });
   };
 
   const toggleCustomizer = () => {
@@ -108,13 +158,30 @@ export const ThemeCustomizerProvider: React.FC<{ children: React.ReactNode }> = 
     const url = URL.createObjectURL(blob);
     
     const link = document.createElement('a');
-    link.download = 'tanoeluis-theme-config.json';
+    link.download = 'theme-config.json';
     link.href = url;
     link.click();
+    
+    toast({
+      title: "Theme Exported",
+      description: "Theme configuration has been exported as JSON",
+    });
   };
 
   const importThemeConfig = (config: ThemeSettings) => {
-    setThemeSettings(config);
+    try {
+      setThemeSettings(config);
+      toast({
+        title: "Theme Imported",
+        description: "Theme configuration has been successfully applied",
+      });
+    } catch (error) {
+      toast({
+        title: "Import Failed",
+        description: "Failed to import theme configuration",
+        variant: "destructive",
+      });
+    }
   };
 
   return (

@@ -106,6 +106,14 @@ export default {
           from: { transform: "translateX(0)" },
           to: { transform: "translateX(100%)" },
         },
+        "pulse-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 rgba(var(--primary-rgb), 0.4)" },
+          "50%": { boxShadow: "0 0 20px rgba(var(--primary-rgb), 0.6)" },
+        },
+        "float": {
+          "0%, 100%": { transform: "translateY(0)" },
+          "50%": { transform: "translateY(-10px)" },
+        }
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -116,6 +124,8 @@ export default {
         "scale-out": "scale-out 0.2s ease-out",
         "slide-in-right": "slide-in-right 0.3s ease-out",
         "slide-out-right": "slide-out-right 0.3s ease-out",
+        "pulse-glow": "pulse-glow 2s infinite",
+        "float": "float 3s ease-in-out infinite",
       },
       backgroundImage: {
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
