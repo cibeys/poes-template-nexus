@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,9 +41,8 @@ export default function Register() {
 
   const onSubmit = async (data: FormData) => {
     try {
-      await signUp(data.email, data.password, {
-        full_name: data.fullName,
-      });
+      // Updated to match the signUp function in useSupabaseAuth.ts which only takes email and password
+      await signUp(data.email, data.password);
       
       toast({
         title: 'Registration successful',

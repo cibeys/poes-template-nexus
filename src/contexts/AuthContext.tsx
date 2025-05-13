@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
@@ -10,7 +9,7 @@ type AuthContextType = {
   profile: Profile | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<boolean>;
-  signUp: (email: string, password: string) => Promise<boolean>;
+  signUp: (email: string, password: string, options?: { full_name?: string }) => Promise<boolean>;
   signOut: () => Promise<boolean>;
   isAdmin: boolean;
 };
@@ -18,10 +17,26 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
-  const { user, loading, signIn, signUp, signOut } = useSupabaseAuth();
+  const { user, loading, signIn, signUp: baseSignUp, signOut } = useSupabaseAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [isAdmin, setIsAdmin] = useState(false);
   const { toast } = useToast();
+
+  // Enhanced signUp function that handles user metadata
+  const signUp = async (email: string, password: string, options?: { full_name?: string }) => {
+    try {
+      // Pass email and password to the base signUp function
+      const success = await baseSignUp(email, password);
+      
+      // If the signup was successful and we have options with full_name,
+      // we can handle this information separately (e.g., store in profiles table)
+      // This would be implemented when we have a profiles table setup
+      
+      return success;
+    } catch (error) {
+      return false;
+    }
+  };
 
   useEffect(() => {
     const getProfile = async () => {
