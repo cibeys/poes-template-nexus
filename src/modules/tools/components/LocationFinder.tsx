@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -93,6 +92,30 @@ export default function LocationFinder() {
     } else {
       setError('Error: Your browser doesn\'t support geolocation.');
     }
+    
+    // Add click event listener to map
+    map.addListener('click', (e: google.maps.MapMouseEvent) => {
+      if (e.latLng) {
+        const clickedPos = {
+          lat: e.latLng.lat(),
+          lng: e.latLng.lng()
+        };
+        
+        // Update marker position
+        if (markerRef.current) {
+          markerRef.current.setPosition(clickedPos);
+        } else {
+          markerRef.current = new window.google.maps.Marker({
+            position: clickedPos,
+            map: googleMapRef.current,
+            animation: window.google.maps.Animation.DROP,
+          });
+        }
+        
+        // Reverse geocode to get address
+        reverseGeocode(clickedPos);
+      }
+    });
   }, []);
   
   // Function to geocode an address and update the map
@@ -175,7 +198,7 @@ export default function LocationFinder() {
   };
   
   // Handle map clicks to set location
-  const handleMapClick = (e: google.maps.MapMouseEvent) => {
+  const handleMapClick = (e: any) => {
     if (!e.latLng) return;
     
     const clickedPos = {

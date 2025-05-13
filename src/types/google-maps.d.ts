@@ -1,4 +1,5 @@
 
+
 declare namespace google {
   namespace maps {
     class Map {
@@ -7,6 +8,7 @@ declare namespace google {
       setZoom(zoom: number): void;
       getCenter(): LatLng;
       setMapTypeId(mapTypeId: string): void;
+      addListener(eventName: string, handler: Function): MapsEventListener;
     }
 
     class Marker {
@@ -123,6 +125,13 @@ declare namespace google {
     class MVCObject {
     }
 
+    // Add correct map event type
+    interface MapMouseEvent {
+      latLng?: LatLng;
+      domEvent?: MouseEvent;
+      stop(): void;
+    }
+
     type GeocoderStatus = 'OK' | 'ZERO_RESULTS' | 'OVER_QUERY_LIMIT' | 'REQUEST_DENIED' | 'INVALID_REQUEST' | 'UNKNOWN_ERROR';
 
     const Animation: {
@@ -132,3 +141,4 @@ declare namespace google {
     };
   }
 }
+
