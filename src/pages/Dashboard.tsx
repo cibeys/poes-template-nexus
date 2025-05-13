@@ -14,6 +14,8 @@ import VideoDownloader from "./VideoDownloader";
 import AIChat from "./AIChat";
 import AdminChat from "@/modules/dashboard/components/AdminChat";
 import UserChat from "@/modules/dashboard/components/UserChat";
+import CrudBlogPost from "@/modules/dashboard/components/CrudBlogPost";
+import CrudTemplate from "@/modules/dashboard/components/CrudTemplate";
 
 export default function Dashboard() {
   const { user, loading, isAdmin } = useAuth();
@@ -48,11 +50,21 @@ export default function Dashboard() {
         <Route path="/ai-chat" element={<AIChat />} />
         <Route path="/chat" element={isAdmin ? <AdminChat /> : <UserChat />} />
         
+        {/* Blog post crud routes */}
+        <Route path="/blog/new" element={<CrudBlogPost />} />
+        <Route path="/blog/edit/:id" element={<CrudBlogPost />} />
+        
         {/* Admin only routes */}
         {isAdmin ? (
           <>
             <Route path="/admin/blog-posts" element={<AdminBlogPosts />} />
+            <Route path="/admin/blog-posts/new" element={<CrudBlogPost />} />
+            <Route path="/admin/blog-posts/edit/:id" element={<CrudBlogPost />} />
+            
             <Route path="/admin/templates" element={<AdminTemplates />} />
+            <Route path="/admin/templates/new" element={<CrudTemplate />} />
+            <Route path="/admin/templates/edit/:id" element={<CrudTemplate />} />
+            
             <Route path="/admin/users" element={<AdminUsers />} />
             <Route path="/admin/categories" element={<AdminCategories />} />
           </>

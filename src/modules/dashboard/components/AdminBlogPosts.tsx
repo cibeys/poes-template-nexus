@@ -24,12 +24,14 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { BlogPost } from "@/types/supabase-custom";
 import { Profile } from "@/types/supabase-custom";
+import { Link, useNavigate } from "react-router-dom";
 
 export default function AdminBlogPosts() {
   const [posts, setPosts] = useState<(BlogPost & { author?: Profile })[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchPosts();
@@ -135,9 +137,11 @@ export default function AdminBlogPosts() {
             Manage all blog posts across the site
           </p>
         </div>
-        <Button>
-          <PlusCircle className="mr-2 h-4 w-4" />
-          New Post
+        <Button asChild>
+          <Link to="/dashboard/admin/blog-posts/new">
+            <PlusCircle className="mr-2 h-4 w-4" />
+            New Post
+          </Link>
         </Button>
       </div>
 
@@ -202,7 +206,9 @@ export default function AdminBlogPosts() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Edit</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => navigate(`/dashboard/admin/blog-posts/edit/${post.id}`)}>
+                            Edit
+                          </DropdownMenuItem>
                           <DropdownMenuItem 
                             onClick={() => updatePostStatus(post.id, "published")}
                           >

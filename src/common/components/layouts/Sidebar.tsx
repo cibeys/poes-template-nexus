@@ -1,7 +1,7 @@
 
 import { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare, Moon, Sun, Laptop, Settings, Wrench } from "lucide-react";
+import { X, ChevronDown, ChevronRight, Home, FileText, Layout, User, Heart, Download, MessageSquare, Moon, Sun, Laptop, Settings, Wrench, Gamepad } from "lucide-react";
 import { useTheme } from "../ThemeProvider";
 
 interface SidebarProps {
@@ -62,6 +62,7 @@ function Dropdown({ icon, title, children, defaultOpen = false }: DropdownProps)
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
   const isActive = (path: string) => location.pathname === path;
+  const isPathActive = (path: string) => location.pathname.startsWith(path);
   const { theme, setTheme } = useTheme();
 
   return (
@@ -164,6 +165,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               title="AI Chat"
               href="/ai-chat"
               isActive={isActive("/ai-chat")}
+            />
+
+            <NavItem
+              icon={<Gamepad size={18} />}
+              title="Games"
+              href="/games"
+              isActive={isPathActive("/games")}
             />
 
             <NavItem

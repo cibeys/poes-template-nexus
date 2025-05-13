@@ -21,6 +21,7 @@ import VideoDownloader from "./pages/VideoDownloader";
 import AIChat from "./pages/AIChat";
 import Tools from "./pages/Tools";
 import ToolsDetail from "./pages/ToolsDetail";
+import Games from "./pages/Games";
 
 // Create the query client inside the component function
 const App = () => {
@@ -49,6 +50,8 @@ const App = () => {
                 <Route path="/ai-chat" element={<AIChat />} />
                 <Route path="/tools" element={<Tools />} />
                 <Route path="/tools/:toolId" element={<ToolsDetail />} />
+                <Route path="/games" element={<Games />} />
+                <Route path="/games/:gameId" element={<Games />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>
