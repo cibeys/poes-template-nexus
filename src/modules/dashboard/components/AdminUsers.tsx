@@ -1,4 +1,5 @@
-import { useState } from "react";
+
+import { useState, useEffect } from "react";
 import { 
   Table, 
   TableBody, 
@@ -16,54 +17,115 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
 
 // Define the role type explicitly to match TypeScript requirements
 type UserRole = "user" | "admin";
 
 interface User {
-  id: number;
-  name: string;
+  id: string;
+  username: string | null;
+  full_name: string | null;
   email: string;
-  role: UserRole; // Using the explicit type
-  status: "active" | "inactive";
-  joined: string;
+  role: UserRole;
+  created_at: string;
 }
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john@example.com",
-      role: "admin",
-      status: "active",
-      joined: "2023-01-15"
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane@example.com",
-      role: "user",
-      status: "active",
-      joined: "2023-02-20"
-    },
-    {
-      id: 3,
-      name: "Alice Johnson",
-      email: "alice@example.com",
-      role: "user",
-      status: "inactive",
-      joined: "2023-03-10"
-    },
-  ]);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-  const updateUserRole = (id: number, role: UserRole) => {
-    setUsers(users.map(user => 
-      user.id === id ? { ...user, role } : user
-    ));
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        setLoading(true);
+        
+        // Get user profiles
+        const { data: profiles, error } = await supabase
+          .from('profiles')
+          .select('*');
+          
+        if (error) throw error;
+        
+        // For each profile, get the corresponding auth user to get the email
+        const usersWithEmail = await Promise.all(
+          (profiles || []).map(async (profile) => {
+            // For each profile, we need to fetch the email from auth.users
+            // but we can't directly access auth.users with the Supabase client
+            // So we'll use what we have available - the id
+
+            // In a real production app, you might want to store emails in profiles table
+            // or use a custom server function to get this data
+            // For now, we'll simulate with the username and assume it's the local part of the email
+            const email = profile.username ? `${profile.username}@example.com` : 'unknown@example.com';
+            
+            return {
+              id: profile.id,
+              username: profile.username,
+              full_name: profile.full_name,
+              email: email,
+              role: profile.role || 'user',
+              created_at: profile.created_at
+            };
+          })
+        );
+        
+        setUsers(usersWithEmail);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to fetch users',
+          variant: 'destructive',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUsers();
+  }, [toast]);
+  
+  const updateUserRole = async (id: string, role: UserRole) => {
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({ role })
+        .eq('id', id);
+        
+      if (error) throw error;
+      
+      // Update local state
+      setUsers(users.map(user => 
+        user.id === id ? { ...user, role } : user
+      ));
+      
+      toast({
+        title: 'Success',
+        description: `User role updated to ${role}`,
+      });
+    } catch (error) {
+      console.error('Error updating user role:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update user role',
+        variant: 'destructive',
+      });
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -82,59 +144,59 @@ export default function AdminUsers() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Joined</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={user.role === "admin" ? "destructive" : "default"}
-                  >
-                    {user.role}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge 
-                    variant={user.status === "active" ? "default" : "secondary"}
-                  >
-                    {user.status}
-                  </Badge>
-                </TableCell>
-                <TableCell>{user.joined}</TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="sm">
-                        <MoreHorizontal className="h-4 w-4" />
-                        <span className="sr-only">Actions</span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem>View Profile</DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => updateUserRole(user.id, "admin")}
-                      >
-                        Make Admin
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
-                        onClick={() => updateUserRole(user.id, "user")}
-                      >
-                        Make Regular User
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-red-600">
-                        Disable Account
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+            {users.length > 0 ? (
+              users.map((user) => (
+                <TableRow key={user.id}>
+                  <TableCell className="font-medium">
+                    {user.full_name || user.username || 'Anonymous'}
+                  </TableCell>
+                  <TableCell>{user.email}</TableCell>
+                  <TableCell>
+                    <Badge 
+                      variant={user.role === "admin" ? "destructive" : "default"}
+                    >
+                      {user.role}
+                    </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {user.created_at ? format(new Date(user.created_at), 'yyyy-MM-dd') : 'Unknown'}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm">
+                          <MoreHorizontal className="h-4 w-4" />
+                          <span className="sr-only">Actions</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => updateUserRole(user.id, "admin")}
+                        >
+                          Make Admin
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => updateUserRole(user.id, "user")}
+                        >
+                          Make Regular User
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={5} className="text-center py-6">
+                  No users found
                 </TableCell>
               </TableRow>
-            ))}
+            )}
           </TableBody>
         </Table>
       </Card>

@@ -72,10 +72,18 @@ export function useSupabaseAuth() {
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, options?: { full_name?: string }) => {
     try {
       setLoading(true);
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ 
+        email, 
+        password,
+        options: {
+          data: {
+            full_name: options?.full_name
+          }
+        }
+      });
       
       if (error) {
         toast({

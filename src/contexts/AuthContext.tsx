@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useSupabaseAuth } from '@/hooks/use-supabase-auth';
@@ -25,15 +26,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   // Enhanced signUp function that handles user metadata
   const signUp = async (email: string, password: string, options?: { full_name?: string }) => {
     try {
-      // Pass email and password to the base signUp function
-      const success = await baseSignUp(email, password);
-      
-      // If the signup was successful and we have options with full_name,
-      // we can handle this information separately (e.g., store in profiles table)
-      // This would be implemented when we have a profiles table setup
-      
-      return success;
+      // Pass email and password to the base signUp function with metadata
+      return await baseSignUp(email, password, {
+        full_name: options?.full_name
+      });
     } catch (error) {
+      console.error("Error in enhanced signUp:", error);
       return false;
     }
   };
