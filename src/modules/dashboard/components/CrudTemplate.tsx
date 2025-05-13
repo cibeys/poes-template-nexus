@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -29,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { techStackToArray } from "@/lib/utils";
 
 // Define the form schema
 const templateSchema = z.object({
@@ -43,7 +43,7 @@ const templateSchema = z.object({
   preview_url: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
   github_url: z.string().url({ message: "Please enter a valid URL" }).optional().or(z.literal("")),
   is_premium: z.boolean().default(false),
-  tech_stack: z.string().transform(val => val ? val.split(",").map(item => item.trim()) : []),
+  tech_stack: z.string().default(""),
 });
 
 type TemplateFormValues = z.infer<typeof templateSchema>;
@@ -129,10 +129,8 @@ export default function CrudTemplate() {
     setLoading(true);
     
     try {
-      // Ensure tech_stack is an array before saving
-      const techStackArray = typeof data.tech_stack === 'string' 
-        ? data.tech_stack.split(',').map(item => item.trim())
-        : data.tech_stack;
+      // Convert tech_stack string to array
+      const techStackArray = techStackToArray(data.tech_stack);
       
       if (id) {
         // Update existing template

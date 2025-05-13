@@ -85,11 +85,25 @@ export default function BlockBlast() {
     // Create a deep copy of the grid
     const newGrid = JSON.parse(JSON.stringify(grid));
     
+    // Ensure the grid is valid before proceeding
+    if (!newGrid || !Array.isArray(newGrid) || newGrid.length === 0) {
+      console.error("Invalid grid state");
+      return;
+    }
+    
     // Reset any previous checks
     for (let row = 0; row < GRID_SIZE; row++) {
       for (let col = 0; col < GRID_SIZE; col++) {
-        newGrid[row][col].checked = false;
+        if (newGrid[row] && newGrid[row][col]) {
+          newGrid[row][col].checked = false;
+        }
       }
+    }
+    
+    // Check if coordinates are valid
+    if (!newGrid[y] || !newGrid[y][x]) {
+      console.error("Invalid coordinates:", x, y);
+      return;
     }
     
     // Check for connected blocks of the same color
@@ -102,7 +116,9 @@ export default function BlockBlast() {
       
       // Mark blocks for removing animation
       connectedBlocks.forEach(([bx, by]) => {
-        newGrid[by][bx].removing = true;
+        if (newGrid[by] && newGrid[by][bx]) {
+          newGrid[by][bx].removing = true;
+        }
       });
       
       setGrid(newGrid);
@@ -141,10 +157,13 @@ export default function BlockBlast() {
   // Find all connected blocks of the same color
   const findConnectedBlocks = (grid: Block[][], x: number, y: number, color: string): [number, number][] => {
     if (
+      !grid || 
       y < 0 || 
       y >= GRID_SIZE || 
       x < 0 || 
       x >= GRID_SIZE || 
+      !grid[y] || 
+      !grid[y][x] ||
       grid[y][x].checked || 
       grid[y][x].color !== color
     ) {
@@ -171,11 +190,15 @@ export default function BlockBlast() {
   
   // Remove blocks and collapse the grid
   const removeBlocks = (blocksToRemove: [number, number][]) => {
+    if (!grid || grid.length === 0) return;
+    
     const newGrid = JSON.parse(JSON.stringify(grid));
     
     // First pass: remove the blocks (set to null)
     blocksToRemove.forEach(([x, y]) => {
-      newGrid[y][x] = null;
+      if (newGrid[y] && newGrid[y][x] !== undefined) {
+        newGrid[y][x] = null;
+      }
     });
     
     // Second pass: for each column, move blocks down to fill gaps
@@ -184,7 +207,11 @@ export default function BlockBlast() {
       
       // Extract the column
       for (let y = 0; y < GRID_SIZE; y++) {
-        column.push(newGrid[y][x]);
+        if (newGrid[y]) {
+          column.push(newGrid[y][x]);
+        } else {
+          column.push(null);
+        }
       }
       
       // Filter out null values
@@ -200,7 +227,9 @@ export default function BlockBlast() {
       
       // Put the column back
       for (let y = 0; y < GRID_SIZE; y++) {
-        newGrid[y][x] = compactedColumn[y];
+        if (newGrid[y]) {
+          newGrid[y][x] = compactedColumn[y];
+        }
       }
     }
     
@@ -208,9 +237,13 @@ export default function BlockBlast() {
     
     // After animation, clear falling state
     setTimeout(() => {
+      if (!newGrid || newGrid.length === 0) return;
+      
       const finalGrid = JSON.parse(JSON.stringify(newGrid));
       
       for (let y = 0; y < GRID_SIZE; y++) {
+        if (!finalGrid[y]) continue;
+        
         for (let x = 0; x < GRID_SIZE; x++) {
           if (finalGrid[y][x]?.falling) {
             finalGrid[y][x].falling = false;
@@ -231,15 +264,25 @@ export default function BlockBlast() {
   
   // Check if there are any valid moves left
   const checkForValidMoves = (currentGrid: Block[][]) => {
+    if (!currentGrid || currentGrid.length === 0) return;
+    
     for (let y = 0; y < GRID_SIZE; y++) {
+      if (!currentGrid[y]) continue;
+      
       for (let x = 0; x < GRID_SIZE; x++) {
+        if (!currentGrid[y][x]) continue;
+        
         const color = currentGrid[y][x].color;
         const testGrid = JSON.parse(JSON.stringify(currentGrid));
         
         // Reset any previous checks
         for (let row = 0; row < GRID_SIZE; row++) {
+          if (!testGrid[row]) continue;
+          
           for (let col = 0; col < GRID_SIZE; col++) {
-            testGrid[row][col].checked = false;
+            if (testGrid[row][col]) {
+              testGrid[row][col].checked = false;
+            }
           }
         }
         
@@ -310,33 +353,37 @@ export default function BlockBlast() {
     ctx.fillRect(0, 0, GRID_SIZE * CELL_SIZE, GRID_SIZE * CELL_SIZE);
     
     // Draw blocks
-    for (let y = 0; y < GRID_SIZE; y++) {
-      for (let x = 0; x < GRID_SIZE; x++) {
-        const block = grid[y][x];
-        if (!block) continue;
+    if (grid && grid.length > 0) {
+      for (let y = 0; y < Math.min(GRID_SIZE, grid.length); y++) {
+        if (!grid[y]) continue;
         
-        const blockSize = block.removing ? CELL_SIZE * 0.5 : CELL_SIZE * 0.9;
-        const offset = (CELL_SIZE - blockSize) / 2;
-        
-        ctx.fillStyle = block.color;
-        
-        // Apply glow effect for falling blocks
-        if (block.falling) {
-          ctx.shadowColor = block.color;
-          ctx.shadowBlur = 10;
-        } else {
+        for (let x = 0; x < GRID_SIZE; x++) {
+          const block = grid[y][x];
+          if (!block) continue;
+          
+          const blockSize = block.removing ? CELL_SIZE * 0.5 : CELL_SIZE * 0.9;
+          const offset = (CELL_SIZE - blockSize) / 2;
+          
+          ctx.fillStyle = block.color;
+          
+          // Apply glow effect for falling blocks
+          if (block.falling) {
+            ctx.shadowColor = block.color;
+            ctx.shadowBlur = 10;
+          } else {
+            ctx.shadowBlur = 0;
+          }
+          
+          // Apply scale out animation for removing blocks
+          ctx.fillRect(
+            x * CELL_SIZE + offset,
+            y * CELL_SIZE + offset,
+            blockSize,
+            blockSize
+          );
+          
           ctx.shadowBlur = 0;
         }
-        
-        // Apply scale out animation for removing blocks
-        ctx.fillRect(
-          x * CELL_SIZE + offset,
-          y * CELL_SIZE + offset,
-          blockSize,
-          blockSize
-        );
-        
-        ctx.shadowBlur = 0;
       }
     }
     
